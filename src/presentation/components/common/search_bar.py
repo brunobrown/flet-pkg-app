@@ -10,9 +10,11 @@ def HeroSearchBar(
 ) -> ft.Control:
     query, set_query = ft.use_state("")
 
-    def handle_search(_e: ft.ControlEvent | None = None) -> None:
-        if on_search and query:
-            on_search(query)
+    def handle_search_submit(e: ft.ControlEvent) -> None:
+        """Handle Enter key — use e.data which contains the current text."""
+        text = e.data or query
+        if on_search and text:
+            on_search(text)
 
     # Top-right toolbar (Help + Theme toggle) like pub.dev
     top_bar = ft.Container(
@@ -50,20 +52,31 @@ def HeroSearchBar(
             controls=[
                 top_bar,
                 ft.Container(height=10),
-                ft.Text(
-                    "Flet PKG",
-                    size=42,
-                    weight=ft.FontWeight.BOLD,
-                    text_align=ft.TextAlign.CENTER,
-                    color=ft.Colors.WHITE,
+                ft.Row(
+                    controls=[
+                        ft.Image(
+                            src="/images/flet.svg",
+                            width=52,
+                            height=52,
+                            fit=ft.BoxFit.CONTAIN,
+                        ),
+                        ft.Text(
+                            "Flet PKG",
+                            size=42,
+                            weight=ft.FontWeight.BOLD,
+                            color=ft.Colors.WHITE,
+                        ),
+                    ],
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    spacing=12,
                 ),
                 ft.Container(height=8),
                 ft.Container(
                     content=ft.TextField(
                         value=query,
                         hint_text="Search packages",
-                        on_change=lambda e: set_query(e.control.value),
-                        on_submit=lambda _e: handle_search(),
+                        on_change=lambda e: set_query(e.data or ""),
+                        on_submit=handle_search_submit,
                         border_radius=30,
                         content_padding=ft.Padding(left=20, top=14, right=20, bottom=14),
                         border_color="transparent",

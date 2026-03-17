@@ -12,19 +12,21 @@ def AppHeader(
 ) -> ft.Control:
     query, set_query = ft.use_state(search_query)
 
-    def handle_search(e: ft.ControlEvent) -> None:
-        if on_search:
-            on_search(query)
+    def handle_search_submit(e: ft.ControlEvent) -> None:
+        text = e.data or query
+        if on_search and text:
+            on_search(text)
 
     return ft.Container(
         content=ft.Row(
             controls=[
-                # Logo (arrow icon like pub.dev)
+                # Logo (Flet icon like pub.dev)
                 ft.Container(
-                    content=ft.Icon(
-                        ft.Icons.ARROW_BACK_IOS_NEW,
-                        color=DARK_ACCENT,
-                        size=28,
+                    content=ft.Image(
+                        src="/images/flet.svg",
+                        width=32,
+                        height=32,
+                        fit=ft.BoxFit.CONTAIN,
                     ),
                     on_click=lambda _: on_navigate_home() if on_navigate_home else None,
                     ink=True,
@@ -35,8 +37,8 @@ def AppHeader(
                     content=ft.TextField(
                         value=query,
                         hint_text="Search packages",
-                        on_change=lambda e: set_query(e.control.value),
-                        on_submit=lambda e: handle_search(e),
+                        on_change=lambda e: set_query(e.data or ""),
+                        on_submit=handle_search_submit,
                         border_radius=25,
                         content_padding=ft.Padding(left=16, top=8, right=16, bottom=8),
                         border_color="transparent",

@@ -34,7 +34,7 @@ def SidebarFilters(
                 ft.Checkbox(
                     label="UI Controls",
                     value=filter_ui,
-                    on_change=lambda e: on_filter_ui(e.control.value) if on_filter_ui else None,
+                    on_change=lambda e: on_filter_ui(e.data == "true") if on_filter_ui else None,
                     check_color=ft.Colors.WHITE,
                     active_color=DARK_ACCENT,
                 ),
@@ -42,7 +42,7 @@ def SidebarFilters(
                     label="Services",
                     value=filter_services,
                     on_change=lambda e: (
-                        on_filter_services(e.control.value) if on_filter_services else None
+                        on_filter_services(e.data == "true") if on_filter_services else None
                     ),
                     check_color=ft.Colors.WHITE,
                     active_color=DARK_ACCENT,
@@ -68,7 +68,7 @@ def SidebarFilters(
                     label="Developed by Flet Team",
                     value=filter_official,
                     on_change=lambda e: (
-                        on_filter_official(e.control.value) if on_filter_official else None
+                        on_filter_official(e.data == "true") if on_filter_official else None
                     ),
                     check_color=ft.Colors.WHITE,
                     active_color=DARK_ACCENT,
@@ -77,7 +77,7 @@ def SidebarFilters(
                     label="Has screenshot",
                     value=filter_screenshot,
                     on_change=lambda e: (
-                        on_filter_screenshot(e.control.value) if on_filter_screenshot else None
+                        on_filter_screenshot(e.data == "true") if on_filter_screenshot else None
                     ),
                     check_color=ft.Colors.WHITE,
                     active_color=DARK_ACCENT,

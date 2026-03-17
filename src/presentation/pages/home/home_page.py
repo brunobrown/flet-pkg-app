@@ -1,5 +1,3 @@
-import asyncio
-
 import flet as ft
 
 from src.presentation.components.common.loading import ErrorMessage, LoadingIndicator
@@ -19,13 +17,22 @@ def HomePage(
     on_view_all: object,
     on_theme_toggle: object = None,
 ) -> ft.Control:
-    loaded, set_loaded = ft.use_state(False)
+    loading, set_loading = ft.use_state(True)
+    error, set_error = ft.use_state("")
+    retry_count, set_retry_count = ft.use_state(0)
 
-    if not loaded and not state.home_loading:
-        set_loaded(True)
-        asyncio.ensure_future(load_home_data(state, api))
+    async def _load_home():
+        set_loading(True)
+        set_error("")
+        try:
+            await load_home_data(state, api)
+        except Exception as e:
+            set_error(str(e))
+        set_loading(False)
 
-    if state.home_loading:
+    ft.use_effect(_load_home, dependencies=[retry_count])
+
+    if loading:
         return ft.Column(
             controls=[
                 HeroSearchBar(on_search, on_theme_toggle=on_theme_toggle),
@@ -35,14 +42,11 @@ def HomePage(
             expand=True,
         )
 
-    if state.error:
+    if error:
         return ft.Column(
             controls=[
                 HeroSearchBar(on_search, on_theme_toggle=on_theme_toggle),
-                ErrorMessage(
-                    state.error,
-                    on_retry=lambda: asyncio.ensure_future(load_home_data(state, api)),
-                ),
+                ErrorMessage(error, on_retry=lambda: set_retry_count(lambda v: v + 1)),
             ],
             scroll=ft.ScrollMode.AUTO,
             expand=True,
@@ -61,6 +65,8 @@ def HomePage(
                     packages=hd.official_packages,
                     on_package_click=on_package_click,
                     on_view_all=on_view_all,
+                    max_cards=4,
+                    cols_per_row=4,
                 )
             )
 

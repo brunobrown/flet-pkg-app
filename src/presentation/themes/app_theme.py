@@ -1,13 +1,15 @@
 import flet as ft
 
+from src.presentation.themes.colors import FLET_BLUE, FLET_BLUE_LIGHT
+
 
 def get_dark_theme() -> ft.Theme:
     return ft.Theme(
-        color_scheme_seed=ft.Colors.CYAN,
+        color_scheme_seed=FLET_BLUE,
         color_scheme=ft.ColorScheme(
-            primary=ft.Colors.CYAN_400,
+            primary=FLET_BLUE_LIGHT,
             on_primary=ft.Colors.WHITE,
-            secondary=ft.Colors.CYAN_700,
+            secondary=FLET_BLUE,
             surface="#1e2337",
             on_surface=ft.Colors.WHITE,
             surface_container_lowest="#1a1a2e",
@@ -26,7 +28,7 @@ def get_dark_theme() -> ft.Theme:
             body_large=ft.TextStyle(color="#e0e0e0"),
             body_medium=ft.TextStyle(color="#e0e0e0"),
             body_small=ft.TextStyle(color="#9e9e9e"),
-            label_large=ft.TextStyle(color=ft.Colors.CYAN_400),
+            label_large=ft.TextStyle(color=FLET_BLUE_LIGHT),
             label_medium=ft.TextStyle(color="#9e9e9e"),
             label_small=ft.TextStyle(color="#757575"),
         ),
@@ -35,11 +37,11 @@ def get_dark_theme() -> ft.Theme:
 
 def get_light_theme() -> ft.Theme:
     return ft.Theme(
-        color_scheme_seed=ft.Colors.BLUE,
+        color_scheme_seed=FLET_BLUE,
         color_scheme=ft.ColorScheme(
-            primary=ft.Colors.BLUE_700,
+            primary=FLET_BLUE,
             on_primary=ft.Colors.WHITE,
-            secondary=ft.Colors.BLUE_400,
+            secondary=FLET_BLUE_LIGHT,
             surface=ft.Colors.WHITE,
             on_surface=ft.Colors.BLACK,
             surface_container_lowest="#f5f5f5",

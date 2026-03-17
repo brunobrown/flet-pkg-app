@@ -233,7 +233,6 @@ def PackageCardSmall(package: Package, on_click: object) -> ft.Control:
             ],
             spacing=4,
         ),
-        width=250,
         height=170,
         padding=16,
         border_radius=8,

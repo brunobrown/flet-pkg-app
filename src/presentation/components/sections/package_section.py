@@ -12,14 +12,35 @@ def PackageSection(
     on_package_click: object,
     on_view_all: object = None,
     description: str = "",
+    max_cards: int = 6,
+    cols_per_row: int = 3,
 ) -> ft.Control:
     if not packages:
         return ft.Container()
 
-    cards = [PackageCardSmall(pkg, on_package_click) for pkg in packages]
+    visible = packages[:max_cards]
+
+    # Each card gets a responsive col value:
+    # Desktop (LG): cols_per_row cards per row → col = 12 / cols_per_row
+    # Tablet (MD): 2 per row → col = 6
+    # Mobile (XS): 1 per row → col = 12
+    col_lg = 12 // cols_per_row
+
+    cards = []
+    for pkg in visible:
+        cards.append(
+            ft.Container(
+                content=PackageCardSmall(pkg, on_package_click),
+                col={
+                    ft.ResponsiveRowBreakpoint.XS: 12,
+                    ft.ResponsiveRowBreakpoint.SM: 6,
+                    ft.ResponsiveRowBreakpoint.MD: 6,
+                    ft.ResponsiveRowBreakpoint.LG: col_lg,
+                },
+            )
+        )
 
     controls: list[ft.Control] = [
-        # Section title (colored, like pub.dev)
         ft.Text(
             title,
             size=22,
@@ -30,26 +51,19 @@ def PackageSection(
 
     if description:
         controls.append(
-            ft.Text(
-                description,
-                size=14,
-                color="#9e9e9e",
-            )
+            ft.Text(description, size=14, color="#9e9e9e"),
         )
 
     controls.append(ft.Container(height=16))
 
-    # Cards in a horizontal scrollable row (left-aligned like pub.dev)
     controls.append(
-        ft.Row(
+        ft.ResponsiveRow(
             controls=cards,
-            scroll=ft.ScrollMode.AUTO,
             spacing=12,
-            alignment=ft.MainAxisAlignment.START,
+            run_spacing=12,
         )
     )
 
-    # VIEW ALL link (right-aligned, uppercase, like pub.dev)
     if on_view_all:
         controls.append(
             ft.Container(

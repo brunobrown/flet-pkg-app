@@ -1,7 +1,5 @@
 """Navigation service that encapsulates page-level routing operations."""
 
-import asyncio
-
 import flet as ft
 
 from src.presentation.navigation.app_router import (
@@ -18,8 +16,8 @@ class NavigationService:
         self._page = page
 
     def push(self, route: str) -> None:
-        """Push a new route to the browser history."""
-        asyncio.create_task(self._page.push_route(route))
+        """Push a new route to the browser history using page.run_task."""
+        self._page.run_task(self._page.push_route, route)
 
     def go_home(self) -> None:
         self.push(ROUTE_HOME)
@@ -30,12 +28,3 @@ class NavigationService:
     def go_detail_by_name(self, package_name: str) -> None:
         """Navigate to package detail by package name."""
         self.push(build_detail_route(package_name))
-
-    def go_back(self) -> None:
-        """Navigate back by removing the top view."""
-        if len(self._page.views) > 1:
-            self._page.views.pop()
-            top_view = self._page.views[-1]
-            self.push(top_view.route)
-        else:
-            self.go_home()

@@ -1,5 +1,3 @@
-import asyncio
-
 import flet as ft
 
 from src.core.constants import PACKAGES_PER_PAGE, SORT_OPTIONS
@@ -24,46 +22,65 @@ def PackagesPage(
     filter_services, set_filter_services = ft.use_state(False)
     filter_official, set_filter_official = ft.use_state(False)
     filter_screenshot, set_filter_screenshot = ft.use_state(False)
+    is_loading, set_is_loading = ft.use_state(True)
+    search_error, set_search_error = ft.use_state("")
+    # Increment to force re-search via use_effect
+    search_version, set_search_version = ft.use_state(0)
 
-    def _search(query: str = "", page_num: int = 1) -> None:
-        asyncio.ensure_future(search_packages(state, api, query or state.search_query, page_num))
+    # All data loading via use_effect — runs in Flet's scheduler context
+    async def _do_search():
+        set_is_loading(True)
+        set_search_error("")
+        try:
+            await search_packages(state, api, state.search_query, state.current_page)
+        except Exception as e:
+            set_search_error(str(e))
+        set_is_loading(False)
+
+    # Re-runs when any dependency changes
+    ft.use_effect(_do_search, dependencies=[search_version])
+
+    def _trigger_search() -> None:
+        """Increment version to trigger use_effect re-run."""
+        set_search_version(lambda v: v + 1)
 
     def on_ui_change(val: bool) -> None:
         set_filter_ui(val)
         state.filter_type = "UI Controls" if val else None
-        _search()
+        _trigger_search()
 
     def on_services_change(val: bool) -> None:
         set_filter_services(val)
         state.filter_type = "Services" if val else None
-        _search()
+        _trigger_search()
 
     def on_official_change(val: bool) -> None:
         set_filter_official(val)
         state.filter_official = val
-        _search()
+        _trigger_search()
 
     def on_screenshot_change(val: bool) -> None:
         set_filter_screenshot(val)
 
     def on_sort_change(e: ft.ControlEvent) -> None:
-        state.sort_by = e.control.value
-        _search()
+        state.sort_by = str(e.data) if e.data else "default ranking"
+        _trigger_search()
 
     def on_page_change(page_num: int) -> None:
-        _search(page_num=page_num)
+        state.current_page = page_num
+        _trigger_search()
 
     # Build package list
     package_list: list[ft.Control] = []
-    if state.is_loading:
+    if is_loading:
         package_list.append(LoadingIndicator("Searching packages..."))
-    elif state.error:
-        package_list.append(ErrorMessage(state.error, on_retry=_search))
+    elif search_error:
+        package_list.append(ErrorMessage(search_error, on_retry=_trigger_search))
     else:
         for pkg in state.packages:
             package_list.append(PackageCard(pkg, on_click=on_package_click, on_copy=on_copy))
 
-    sort_items = [ft.dropdown.Option(text=s, key=s) for s in SORT_OPTIONS]
+    sort_items = [ft.DropdownOption(text=s, key=s) for s in SORT_OPTIONS]
 
     return ft.Row(
         controls=[
@@ -127,13 +144,10 @@ def PackagesPage(
                                             ft.Dropdown(
                                                 value=state.sort_by,
                                                 options=sort_items,
-                                                on_change=on_sort_change,
+                                                on_select=on_sort_change,
                                                 width=180,
                                                 height=36,
                                                 text_size=12,
-                                                content_padding=ft.Padding(
-                                                    left=8, top=4, right=8, bottom=4
-                                                ),
                                                 border_color=DARK_ACCENT,
                                                 color=DARK_ACCENT,
                                                 bgcolor=DARK_CARD,

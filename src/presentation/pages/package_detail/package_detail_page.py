@@ -1,9 +1,7 @@
-import asyncio
-
 import flet as ft
 
 from src.presentation.components.common.loading import ErrorMessage, LoadingIndicator
-from src.presentation.hooks.use_packages import load_package_detail_by_name, toggle_star
+from src.presentation.hooks.use_packages import load_package_detail_by_name
 from src.presentation.state_management.global_state import PackagesState, UserState
 from src.presentation.themes.colors import DARK_ACCENT, DARK_CARD, DARK_DIVIDER, TAG_BG, TAG_COLOR
 from src.services.api_service import ApiService
@@ -21,80 +19,83 @@ def PackageDetailPage(
 ) -> ft.Control:
     active_tab, set_active_tab = ft.use_state(0)
     is_starred, set_is_starred = ft.use_state(False)
+    loading, set_loading = ft.use_state(True)
+    error, set_error = ft.use_state("")
 
-    if state.detail_loading:
+    async def _load_detail():
+        set_loading(True)
+        set_error("")
+        try:
+            await load_package_detail_by_name(state, api, package_name)
+        except Exception as e:
+            set_error(str(e))
+        set_loading(False)
+
+    ft.use_effect(_load_detail, dependencies=[package_name])
+
+    if loading:
         return LoadingIndicator("Loading package details...")
 
-    if state.error and not state.detail_package:
-        return ErrorMessage(
-            state.error,
-            on_retry=lambda: asyncio.ensure_future(
-                load_package_detail_by_name(state, api, package_name)
-            ),
-        )
+    if error:
+        return ErrorMessage(error)
 
     pkg = state.detail_package
     if not pkg:
-        return LoadingIndicator("Loading package details...")
+        return ErrorMessage("Package not found")
 
     def handle_star(_e: ft.ControlEvent) -> None:
-        async def _star() -> None:
-            result = await toggle_star(state, user, api, pkg.github_owner, pkg.github_repo)
-            set_is_starred(result)
-
-        if user.github_token and pkg.github_owner:
-            asyncio.ensure_future(_star())
+        # Star/unstar requires GitHub OAuth — not yet implemented
+        pass
 
     def handle_copy(_e: ft.ControlEvent) -> None:
         if on_copy:
             on_copy(pkg.pip_install_command)
 
-    # Tab content
-    if active_tab == 0:
-        tab_content = ft.Container(
-            content=ft.Markdown(
-                value=pkg.readme or "No README available",
-                selectable=True,
-                extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
-                on_tap_link=lambda e: None,
-            ),
-            padding=20,
-        )
-    elif active_tab == 1:
-        tab_content = ft.Container(
-            content=ft.Markdown(
-                value=pkg.changelog or "No changelog available",
-                selectable=True,
-                extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
-            ),
-            padding=20,
-        )
-    else:
-        doc_controls: list[ft.Control] = []
-        if pkg.documentation_url:
-            doc_controls.append(
-                ft.TextButton(
-                    "Documentation",
-                    icon=ft.Icons.BOOK,
-                    url=pkg.documentation_url,
-                    style=ft.ButtonStyle(color=DARK_ACCENT),
-                )
+    # Tab contents
+    readme_view = ft.Container(
+        content=ft.Markdown(
+            value=pkg.readme or "No README available",
+            selectable=True,
+            extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+            on_tap_link=lambda e: None,
+        ),
+        padding=20,
+    )
+
+    changelog_view = ft.Container(
+        content=ft.Markdown(
+            value=pkg.changelog or "No changelog available",
+            selectable=True,
+            extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+        ),
+        padding=20,
+    )
+
+    doc_controls: list[ft.Control] = []
+    if pkg.documentation_url:
+        doc_controls.append(
+            ft.TextButton(
+                "Documentation",
+                icon=ft.Icons.BOOK,
+                url=pkg.documentation_url,
+                style=ft.ButtonStyle(color=DARK_ACCENT),
             )
-        if pkg.repository_url:
-            doc_controls.append(
-                ft.TextButton(
-                    "GitHub Repository",
-                    icon=ft.Icons.CODE,
-                    url=pkg.repository_url,
-                    style=ft.ButtonStyle(color=DARK_ACCENT),
-                )
-            )
-        if not doc_controls:
-            doc_controls.append(ft.Text("No documentation links available", color="#9e9e9e"))
-        tab_content = ft.Container(
-            content=ft.Column(controls=doc_controls, spacing=12),
-            padding=20,
         )
+    if pkg.repository_url:
+        doc_controls.append(
+            ft.TextButton(
+                "GitHub Repository",
+                icon=ft.Icons.CODE,
+                url=pkg.repository_url,
+                style=ft.ButtonStyle(color=DARK_ACCENT),
+            )
+        )
+    if not doc_controls:
+        doc_controls.append(ft.Text("No documentation links available", color="#9e9e9e"))
+    docs_view = ft.Container(
+        content=ft.Column(controls=doc_controls, spacing=12),
+        padding=20,
+    )
 
     # Topics
     topic_chips = [
@@ -109,6 +110,7 @@ def PackageDetailPage(
 
     dep_controls = [ft.Text(d, size=12, color="#bdbdbd") for d in (pkg.dependencies or [])[:20]]
 
+    # Sidebar
     sidebar = ft.Container(
         content=ft.Column(
             controls=[
@@ -172,6 +174,7 @@ def PackageDetailPage(
 
     return ft.Column(
         controls=[
+            # Package header
             ft.Container(
                 content=ft.Column(
                     controls=[
@@ -233,25 +236,38 @@ def PackageDetailPage(
                 ),
                 padding=ft.Padding(left=20, top=16, right=20, bottom=16),
             ),
+            # Tabs + Sidebar
             ft.Row(
                 controls=[
+                    # Main content with tabs
                     ft.Container(
-                        content=ft.Column(
-                            controls=[
-                                ft.Tabs(
-                                    selected_index=active_tab,
-                                    on_change=lambda e: set_active_tab(e.control.selected_index),
-                                    tabs=[
-                                        ft.Tab(text="Readme"),
-                                        ft.Tab(text="Changelog"),
-                                        ft.Tab(text="Documentation"),
-                                    ],
-                                    indicator_color=DARK_ACCENT,
-                                    label_color=DARK_ACCENT,
-                                    unselected_label_color="#9e9e9e",
-                                ),
-                                tab_content,
-                            ],
+                        content=ft.Tabs(
+                            length=3,
+                            selected_index=active_tab,
+                            on_change=lambda e: set_active_tab(int(e.data)),
+                            content=ft.Column(
+                                controls=[
+                                    ft.TabBar(
+                                        tabs=[
+                                            ft.Tab(label="Readme"),
+                                            ft.Tab(label="Changelog"),
+                                            ft.Tab(label="Documentation"),
+                                        ],
+                                        indicator_color=DARK_ACCENT,
+                                        label_color=DARK_ACCENT,
+                                        unselected_label_color="#9e9e9e",
+                                    ),
+                                    ft.TabBarView(
+                                        controls=[
+                                            readme_view,
+                                            changelog_view,
+                                            docs_view,
+                                        ],
+                                        expand=True,
+                                    ),
+                                ],
+                                expand=True,
+                            ),
                         ),
                         expand=True,
                     ),

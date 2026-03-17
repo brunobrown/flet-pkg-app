@@ -2,6 +2,9 @@
 
 Uses page.render() for declarative rendering.
 Observable state passed as component args triggers re-renders.
+Async data loading uses ft.use_effect() inside components.
+Navigation changes observable state → triggers re-render of AppRoot.
+URL sync uses asyncio.create_task (NOT page.run_task) to preserve ContextVar.
 """
 
 import asyncio
@@ -10,7 +13,6 @@ import flet as ft
 
 from src.domain.entities.package import Package
 from src.presentation.components.common.header import AppHeader
-from src.presentation.hooks.use_packages import load_package_detail_by_name, search_packages
 from src.presentation.hooks.use_theme import toggle_theme_mode
 from src.presentation.navigation.app_router import build_packages_route, parse_route
 from src.presentation.pages.home.home_page import HomePage
@@ -23,7 +25,6 @@ from src.services.api_service import ApiService
 
 
 def main(page: ft.Page) -> None:
-    # --- Page configuration ---
     page.title = "Flet PKG - Package Discovery"
     page.theme = get_light_theme()
     page.dark_theme = get_dark_theme()
@@ -37,23 +38,28 @@ def main(page: ft.Page) -> None:
     api = ApiService()
     pkg_state = app_state.packages
 
-    # --- Navigation via state ---
+    # --- Navigation: change state + sync browser URL ---
+    _navigating = False
+
     def navigate(route: str) -> None:
-        """Update state route (triggers re-render) and sync browser URL."""
-        parsed = parse_route(route)
+        nonlocal _navigating
+        if _navigating:
+            return
+        _navigating = True
+
+        nav_parsed = parse_route(route)
+        if nav_parsed.is_package_detail:
+            app_state.detail_package_name = nav_parsed.package_name
+        elif nav_parsed.is_packages:
+            pkg_state.search_query = nav_parsed.search_query
+        # Triggers AppRoot re-render via observable
         app_state.current_route = route
-
-        if parsed.is_package_detail:
-            app_state.detail_package_name = parsed.package_name
-            asyncio.ensure_future(load_package_detail_by_name(pkg_state, api, parsed.package_name))
-        elif parsed.is_packages:
-            pkg_state.search_query = parsed.search_query
-            asyncio.ensure_future(search_packages(pkg_state, api, parsed.search_query, 1))
-
+        # Sync browser URL — asyncio.create_task copies ContextVar (Python 3.12+)
         asyncio.create_task(page.push_route(route))
 
+        _navigating = False
+
     def handle_search(query: str = "") -> None:
-        pkg_state.search_query = query
         navigate(build_packages_route(query))
 
     def handle_package_click(pkg: object) -> None:
@@ -64,38 +70,32 @@ def main(page: ft.Page) -> None:
         toggle_theme_mode(page, app_state.theme)
 
     def handle_copy(text: str) -> None:
-        page.set_clipboard(text)
-        page.open(ft.SnackBar(content=ft.Text(f"Copied: {text}"), duration=2000))
+        page.run_task(ft.Clipboard().set, text)
+        page.show_dialog(ft.SnackBar(ft.Text(f"Copied: {text}")))
 
-    def handle_view_all() -> None:
-        handle_search("")
-
-    # --- Sync browser navigation → state ---
+    # --- Browser back/forward → sync state ---
     def on_route_change() -> None:
         if page.route != app_state.current_route:
-            parsed = parse_route(page.route)
-            app_state.current_route = page.route
-            if parsed.is_package_detail:
-                app_state.detail_package_name = parsed.package_name
-                asyncio.ensure_future(
-                    load_package_detail_by_name(pkg_state, api, parsed.package_name)
-                )
-            elif parsed.is_packages:
-                pkg_state.search_query = parsed.search_query
-                asyncio.ensure_future(search_packages(pkg_state, api, parsed.search_query, 1))
+            navigate(page.route)
 
     page.on_route_change = on_route_change
 
+    # --- Sync initial route from browser URL ---
+    if page.route and page.route != "/":
+        parsed = parse_route(page.route)
+        if parsed.is_package_detail:
+            app_state.detail_package_name = parsed.package_name
+        elif parsed.is_packages:
+            pkg_state.search_query = parsed.search_query
+        app_state.current_route = page.route
+
     # --- Root component ---
-    # IMPORTANT: app_state is passed as argument so Flet's renderer
-    # tracks its @ft.observable fields and re-renders on changes.
     @ft.component
     def AppRoot(state: AppState) -> list[ft.Control]:
         parsed = parse_route(state.current_route)
         is_dark = state.theme.is_dark
         bg = DARK_BG if is_dark else LIGHT_BG
 
-        # Determine which page to show
         if parsed.is_package_detail:
             page_content = PackageDetailPage(
                 state=state.packages,
@@ -103,7 +103,7 @@ def main(page: ft.Page) -> None:
                 api=api,
                 package_name=state.detail_package_name,
                 on_copy=handle_copy,
-                on_back=lambda: navigate(build_packages_route()),
+                on_back=lambda: navigate("/"),
             )
             show_header = True
         elif parsed.is_packages:
@@ -120,12 +120,11 @@ def main(page: ft.Page) -> None:
                 api=api,
                 on_search=handle_search,
                 on_package_click=handle_package_click,
-                on_view_all=handle_view_all,
+                on_view_all=lambda: handle_search(""),
                 on_theme_toggle=handle_theme_toggle,
             )
             show_header = False
 
-        # Build layout
         controls: list[ft.Control] = []
         if show_header:
             controls.append(
@@ -146,9 +145,8 @@ def main(page: ft.Page) -> None:
             )
         ]
 
-    # --- Start ---
     page.render(AppRoot, app_state)
 
 
 if __name__ == "__main__":
-    ft.run(main, view=ft.AppView.WEB_BROWSER)
+    ft.run(main, view=ft.AppView.WEB_BROWSER, assets_dir="assets")
