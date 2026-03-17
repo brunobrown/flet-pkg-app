@@ -1,0 +1,63 @@
+[project]
+name = "flet-pkg-app"
+version = "0.1.0"
+description = "Flet PKG - Package discovery platform for the Flet ecosystem"
+requires-python = ">=3.14"
+dependencies = [
+    "flet>=0.82.2",
+    "httpx>=0.28.1",
+]
+
+[dependency-groups]
+dev = [
+    "flet[all]>=0.80.2",
+    "pytest>=9.0.2",
+]
+
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["flet-*"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src", "app"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+markers = [
+    "network: tests that download packages from pub.dev (deselect with -m 'not network')",
+]
+
+[tool.ty.rules]
+# Real bug catchers — keep as error
+unresolved-reference = "error"
+unresolved-import = "error"
+# Soft warnings for our code
+possibly-unresolved-reference = "warn"
+invalid-type-form = "warn"
+# Flet's dataclass-based controls generate false positives in ty because:
+# - Constructors accept positional str/int but stubs declare keyword-only
+# - ft.Icons enum not recognized as valid icon parameter
+# - Callback params typed as `object` flagged as non-callable
+# - Some control attrs (Tabs.tabs, Dropdown.on_change) missing from stubs
+# - Page methods (set_clipboard, open) not in stubs
+# These are suppressed until Flet publishes py.typed-compatible stubs.
+invalid-argument-type = "ignore"
+missing-argument = "ignore"
+call-non-callable = "ignore"
+unknown-argument = "ignore"
+unresolved-attribute = "ignore"
+
+[tool.ty.terminal]
+output-format = "concise"
