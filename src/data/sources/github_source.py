@@ -21,6 +21,7 @@ class GitHubSource:
             base_url=GITHUB_API_BASE,
             headers=headers,
             timeout=30.0,
+            limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
         )
 
     async def search_repositories(

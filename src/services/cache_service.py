@@ -9,21 +9,21 @@ logger = get_logger(__name__)
 
 class CacheService:
     def __init__(self, ttl: int = CACHE_TTL_SECONDS):
-        self._ttl = ttl
-        self._store: dict[str, tuple[Any, float]] = {}
+        self._default_ttl = ttl
+        self._store: dict[str, tuple[Any, float, int]] = {}
 
     def get(self, key: str) -> Any | None:
         entry = self._store.get(key)
         if entry is None:
             return None
-        value, timestamp = entry
-        if time.time() - timestamp > self._ttl:
+        value, timestamp, ttl = entry
+        if time.time() - timestamp > ttl:
             del self._store[key]
             return None
         return value
 
-    def set(self, key: str, value: Any) -> None:
-        self._store[key] = (value, time.time())
+    def set(self, key: str, value: Any, ttl: int | None = None) -> None:
+        self._store[key] = (value, time.time(), ttl if ttl is not None else self._default_ttl)
 
     def invalidate(self, key: str) -> None:
         self._store.pop(key, None)

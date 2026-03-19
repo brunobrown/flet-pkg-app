@@ -1,6 +1,7 @@
 import asyncio
 
 from src.core.constants import (
+    CACHE_TTL_DOWNLOADS,
     EXCLUDED_PACKAGES,
     KNOWN_SERVICE_EXTENSIONS,
     KNOWN_UI_CONTROL_EXTENSIONS,
@@ -8,6 +9,7 @@ from src.core.constants import (
 )
 from src.core.logger import get_logger
 from src.data.models.mappers import github_repo_to_package, pypi_info_to_package
+from src.data.sources.clickhouse_source import ClickHouseSource
 from src.data.sources.github_source import GitHubSource
 from src.data.sources.pypi_source import PyPISource
 from src.domain.entities.package import Package, PackageType
@@ -26,7 +28,6 @@ def _classify_package(pkg: Package) -> None:
     elif name_lower in KNOWN_UI_CONTROL_EXTENSIONS:
         pkg.package_type = PackageType.UI_CONTROL
 
-    # Check topics for classification hints
     topics_lower = [t.lower() for t in pkg.topics]
     if pkg.package_type == PackageType.PYTHON_PACKAGE:
         if "service" in topics_lower or "services" in topics_lower:
@@ -41,13 +42,11 @@ def _classify_package(pkg: Package) -> None:
 
 
 def _is_excluded(pkg: Package) -> bool:
-    """Check if a package should be excluded from results."""
     name_lower = pkg.pypi_name.lower() if pkg.pypi_name else pkg.name.lower()
     return name_lower in EXCLUDED_PACKAGES
 
 
 def _filter_excluded(packages: list[Package]) -> list[Package]:
-    """Filter out excluded packages."""
     return [p for p in packages if not _is_excluded(p)]
 
 
@@ -56,11 +55,80 @@ class PackageRepositoryImpl(PackageRepository):
         self,
         github_source: GitHubSource,
         pypi_source: PyPISource,
+        clickhouse_source: ClickHouseSource,
         cache: CacheService,
     ):
         self._github = github_source
         self._pypi = pypi_source
+        self._ch = clickhouse_source
         self._cache = cache
+
+    # --- Downloads: ClickHouse batch with 24h cache ---
+
+    async def _get_downloads_batch(self, names: list[str]) -> dict[str, int]:
+        """Get downloads for multiple packages. ClickHouse first, pypistats fallback."""
+        # Check cache first
+        result: dict[str, int] = {}
+        uncached: list[str] = []
+        for name in names:
+            cached = self._cache.get(f"dl:{name}")
+            if cached is not None:
+                result[name] = cached
+            else:
+                uncached.append(name)
+
+        if not uncached:
+            return result
+
+        # Try ClickHouse batch (1 query for all)
+        try:
+            ch_data = await self._ch.get_downloads_batch(uncached, days=30)
+            for name in uncached:
+                downloads = ch_data.get(name, 0)
+                result[name] = downloads
+                self._cache.set(f"dl:{name}", downloads, ttl=CACHE_TTL_DOWNLOADS)
+            return result
+        except Exception:
+            logger.info("ClickHouse unavailable, falling back to pypistats")
+
+        # Fallback: pypistats (with semaphore + retry)
+        for name in uncached:
+            downloads = await self._pypi.get_recent_downloads(name)
+            result[name] = downloads
+            self._cache.set(f"dl:{name}", downloads, ttl=CACHE_TTL_DOWNLOADS)
+
+        return result
+
+    async def _get_downloads(self, name: str) -> int:
+        batch = await self._get_downloads_batch([name])
+        return batch.get(name, 0)
+
+    # --- Enrich packages with downloads + version ---
+
+    async def _enrich_with_downloads(self, packages: list[Package]) -> None:
+        """Batch-enrich packages with download stats."""
+        names = [p.pypi_name or p.name for p in packages]
+        downloads = await self._get_downloads_batch(names)
+        for pkg in packages:
+            key = pkg.pypi_name or pkg.name
+            pkg.downloads = downloads.get(key, 0)
+
+    async def _enrich_with_pypi(self, packages: list[Package]) -> None:
+        """Enrich with downloads (batch) + version (individual)."""
+        await self._enrich_with_downloads(packages)
+
+        async def _fill_version(pkg: Package) -> None:
+            if not pkg.version:
+                try:
+                    pypi_data = await self._pypi.get_package_info(pkg.pypi_name)
+                    info = pypi_data.get("info", {})
+                    pkg.version = info.get("version", "")
+                except Exception:
+                    pass
+
+        await asyncio.gather(*[_fill_version(p) for p in packages if not p.version])
+
+    # --- Public methods ---
 
     async def search_packages(
         self,
@@ -91,28 +159,22 @@ class PackageRepositoryImpl(PackageRepository):
                 query=search_q,
                 sort=gh_sort,
                 page=page,
-                per_page=per_page + 5,  # fetch extra to account for exclusions
+                per_page=per_page + 5,
             )
             total = min(data.get("total_count", 0), 1000)
             items = data.get("items", [])
 
             packages = [github_repo_to_package(item) for item in items]
-
-            # Classify and filter
             for pkg in packages:
                 _classify_package(pkg)
             packages = _filter_excluded(packages)
 
-            # Apply type filter
             if package_type == "Services":
                 packages = [p for p in packages if p.package_type == PackageType.SERVICE]
             elif package_type == "UI Controls":
                 packages = [p for p in packages if p.package_type == PackageType.UI_CONTROL]
 
-            # Trim to requested size
             packages = packages[:per_page]
-
-            # Enrich with PyPI data
             await self._enrich_with_pypi(packages)
 
             if sort == "most downloads":
@@ -142,7 +204,6 @@ class PackageRepositoryImpl(PackageRepository):
         pkg.readme = readme
         pkg.changelog = changelog
 
-        # Try to get PyPI info
         try:
             pypi_data = await self._pypi.get_package_info(pkg.pypi_name)
             pypi_pkg = pypi_info_to_package(pypi_data)
@@ -152,9 +213,7 @@ class PackageRepositoryImpl(PackageRepository):
                 pkg.license = pypi_pkg.license
             if not pkg.documentation_url:
                 pkg.documentation_url = pypi_pkg.documentation_url
-
-            downloads = await self._pypi.get_recent_downloads(pkg.pypi_name)
-            pkg.downloads = downloads
+            pkg.downloads = await self._get_downloads(pkg.pypi_name)
         except Exception:
             logger.info("No PyPI data for %s", pkg.pypi_name)
 
@@ -162,21 +221,17 @@ class PackageRepositoryImpl(PackageRepository):
         return pkg
 
     async def get_package_by_name(self, package_name: str) -> Package:
-        """Get package by PyPI name, resolving GitHub info automatically."""
         cache_key = f"detail_name:{package_name}"
         cached = self._cache.get(cache_key)
         if cached is not None:
             return cached
 
-        # First get PyPI info to find GitHub owner/repo
         pypi_data = await self._pypi.get_package_info(package_name)
         pkg = pypi_info_to_package(pypi_data)
         _classify_package(pkg)
 
-        downloads = await self._pypi.get_recent_downloads(package_name)
-        pkg.downloads = downloads
+        pkg.downloads = await self._get_downloads(package_name)
 
-        # Try to get README from GitHub
         if pkg.github_owner and pkg.github_repo:
             try:
                 readme, changelog = await asyncio.gather(
@@ -188,7 +243,6 @@ class PackageRepositoryImpl(PackageRepository):
                 pkg.readme = readme
                 pkg.changelog = changelog
 
-                # Get stars/forks from GitHub
                 repo_data = await self._github.get_repository(pkg.github_owner, pkg.github_repo)
                 pkg.stars = repo_data.get("stargazers_count", 0)
                 pkg.forks = repo_data.get("forks_count", 0)
@@ -199,7 +253,6 @@ class PackageRepositoryImpl(PackageRepository):
             except Exception:
                 logger.info("No GitHub data for %s", package_name)
         else:
-            # For monorepo packages, try flet-dev/flet and get README from subpath
             pkg.github_owner = "flet-dev"
             pkg.github_repo = "flet"
             pkg.repository_url = (
@@ -208,9 +261,7 @@ class PackageRepositoryImpl(PackageRepository):
             pkg.issues_url = "https://github.com/flet-dev/flet/issues"
             try:
                 readme = await self._github.get_file_content(
-                    "flet-dev",
-                    "flet",
-                    f"sdk/python/packages/{package_name}/README.md",
+                    "flet-dev", "flet", f"sdk/python/packages/{package_name}/README.md"
                 )
                 pkg.readme = readme
                 repo_data = await self._github.get_repository("flet-dev", "flet")
@@ -227,48 +278,38 @@ class PackageRepositoryImpl(PackageRepository):
         return pkg
 
     async def get_official_packages(self) -> list[Package]:
-        """Get official Flet extension packages from the monorepo."""
         cache_key = "official_packages"
         cached = self._cache.get(cache_key)
         if cached is not None:
             return cached
 
         try:
-            # Fetch package info from PyPI for each official extension
-            packages: list[Package] = []
-
-            async def _fetch_official(pkg_name: str) -> Package | None:
+            # Batch: fetch all PyPI info in parallel
+            async def _fetch(name: str) -> Package | None:
                 try:
-                    pypi_data = await self._pypi.get_package_info(pkg_name)
+                    pypi_data = await self._pypi.get_package_info(name)
                     pkg = pypi_info_to_package(pypi_data)
                     _classify_package(pkg)
                     pkg.is_official = True
                     pkg.publisher = "flet.dev"
-
-                    # Get stars from the main flet repo
                     if not pkg.github_owner:
                         pkg.github_owner = "flet-dev"
                         pkg.github_repo = "flet"
                         pkg.repository_url = (
-                            f"https://github.com/flet-dev/flet/tree/main/"
-                            f"sdk/python/packages/{pkg_name}"
+                            f"https://github.com/flet-dev/flet/tree/main/sdk/python/packages/{name}"
                         )
-
-                    downloads = await self._pypi.get_recent_downloads(pkg_name)
-                    pkg.downloads = downloads
                     return pkg
                 except Exception:
-                    logger.warning("Could not fetch official package: %s", pkg_name)
+                    logger.warning("Could not fetch official package: %s", name)
                     return None
 
-            results = await asyncio.gather(
-                *[_fetch_official(name) for name in OFFICIAL_EXTENSION_PACKAGES]
-            )
+            results = await asyncio.gather(*[_fetch(n) for n in OFFICIAL_EXTENSION_PACKAGES])
             packages = [p for p in results if p is not None]
 
-            # Sort by downloads (most popular first)
-            packages.sort(key=lambda p: p.downloads, reverse=True)
+            # Single batch query for all downloads
+            await self._enrich_with_downloads(packages)
 
+            packages.sort(key=lambda p: p.downloads, reverse=True)
             self._cache.set(cache_key, packages[:5])
             return packages[:5]
         except Exception as e:
@@ -301,33 +342,29 @@ class PackageRepositoryImpl(PackageRepository):
             return []
 
     async def get_service_packages(self, limit: int = 6) -> list[Package]:
-        """Get Flutter extensions for Flet classified as Services."""
         cache_key = f"services:{limit}"
         cached = self._cache.get(cache_key)
         if cached is not None:
             return cached
 
         try:
-            # Fetch known service extensions from PyPI
-            packages: list[Package] = []
             service_names = list(KNOWN_SERVICE_EXTENSIONS)
 
-            async def _fetch_service(name: str) -> Package | None:
+            async def _fetch(name: str) -> Package | None:
                 try:
                     pypi_data = await self._pypi.get_package_info(name)
                     pkg = pypi_info_to_package(pypi_data)
                     pkg.package_type = PackageType.SERVICE
-                    if name in {n for n in OFFICIAL_EXTENSION_PACKAGES}:
+                    if name in set(OFFICIAL_EXTENSION_PACKAGES):
                         pkg.is_official = True
                         pkg.publisher = "flet.dev"
-                    downloads = await self._pypi.get_recent_downloads(name)
-                    pkg.downloads = downloads
                     return pkg
                 except Exception:
                     return None
 
-            results = await asyncio.gather(*[_fetch_service(name) for name in service_names])
+            results = await asyncio.gather(*[_fetch(n) for n in service_names])
             packages = [p for p in results if p is not None]
+            await self._enrich_with_downloads(packages)
             packages.sort(key=lambda p: p.downloads, reverse=True)
 
             self._cache.set(cache_key, packages[:limit])
@@ -337,7 +374,6 @@ class PackageRepositoryImpl(PackageRepository):
             return []
 
     async def get_ui_control_packages(self, limit: int = 6) -> list[Package]:
-        """Get Flutter extensions for Flet classified as UI Controls."""
         cache_key = f"ui_controls:{limit}"
         cached = self._cache.get(cache_key)
         if cached is not None:
@@ -345,24 +381,22 @@ class PackageRepositoryImpl(PackageRepository):
 
         try:
             ui_names = list(KNOWN_UI_CONTROL_EXTENSIONS)
-            packages: list[Package] = []
 
-            async def _fetch_ui(name: str) -> Package | None:
+            async def _fetch(name: str) -> Package | None:
                 try:
                     pypi_data = await self._pypi.get_package_info(name)
                     pkg = pypi_info_to_package(pypi_data)
                     pkg.package_type = PackageType.UI_CONTROL
-                    if name in {n for n in OFFICIAL_EXTENSION_PACKAGES}:
+                    if name in set(OFFICIAL_EXTENSION_PACKAGES):
                         pkg.is_official = True
                         pkg.publisher = "flet.dev"
-                    downloads = await self._pypi.get_recent_downloads(name)
-                    pkg.downloads = downloads
                     return pkg
                 except Exception:
                     return None
 
-            results = await asyncio.gather(*[_fetch_ui(name) for name in ui_names])
+            results = await asyncio.gather(*[_fetch(n) for n in ui_names])
             packages = [p for p in results if p is not None]
+            await self._enrich_with_downloads(packages)
             packages.sort(key=lambda p: p.downloads, reverse=True)
 
             self._cache.set(cache_key, packages[:limit])
@@ -372,14 +406,12 @@ class PackageRepositoryImpl(PackageRepository):
             return []
 
     async def get_python_packages(self, limit: int = 6) -> list[Package]:
-        """Get Python packages that depend on Flet but are NOT Flutter extensions."""
         cache_key = f"python_packages:{limit}"
         cached = self._cache.get(cache_key)
         if cached is not None:
             return cached
 
         try:
-            # Search for repos with topic:flet that are NOT official extensions
             data = await self._github.search_repositories(
                 query="topic:flet language:python NOT flet-dev",
                 sort="stars",
@@ -389,7 +421,6 @@ class PackageRepositoryImpl(PackageRepository):
             packages = [github_repo_to_package(item) for item in items]
             packages = _filter_excluded(packages)
 
-            # Filter out known Flutter extensions
             all_extensions = KNOWN_SERVICE_EXTENSIONS | KNOWN_UI_CONTROL_EXTENSIONS
             packages = [
                 p
@@ -417,17 +448,3 @@ class PackageRepositoryImpl(PackageRepository):
 
     async def is_starred(self, owner: str, repo: str, token: str) -> bool:
         return await self._github.is_starred(owner, repo, token)
-
-    async def _enrich_with_pypi(self, packages: list[Package]) -> None:
-        async def _enrich_one(pkg: Package) -> None:
-            try:
-                downloads = await self._pypi.get_recent_downloads(pkg.pypi_name)
-                pkg.downloads = downloads
-                if not pkg.version:
-                    pypi_data = await self._pypi.get_package_info(pkg.pypi_name)
-                    info = pypi_data.get("info", {})
-                    pkg.version = info.get("version", "")
-            except Exception:
-                pass
-
-        await asyncio.gather(*[_enrich_one(pkg) for pkg in packages])

@@ -1,8 +1,16 @@
+"""PyPI API source — package info and download stats (fallback for ClickHouse)."""
+
+import asyncio
 from typing import Any
 
 import httpx
 
-from src.core.constants import PYPI_API_BASE, PYPISTATS_API_BASE
+from src.core.constants import (
+    MAX_RETRIES,
+    PYPI_API_BASE,
+    PYPISTATS_API_BASE,
+    PYPISTATS_MAX_CONCURRENT,
+)
 from src.core.exceptions import ApiError
 from src.core.logger import get_logger
 
@@ -11,34 +19,54 @@ logger = get_logger(__name__)
 
 class PyPISource:
     def __init__(self):
-        self._client = httpx.AsyncClient(timeout=30.0)
+        self._pypi_client = httpx.AsyncClient(
+            base_url=PYPI_API_BASE,
+            timeout=30.0,
+            limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
+        )
+        self._stats_client = httpx.AsyncClient(
+            base_url=PYPISTATS_API_BASE,
+            timeout=15.0,
+            limits=httpx.Limits(max_connections=5, max_keepalive_connections=3),
+        )
+        self._stats_semaphore = asyncio.Semaphore(PYPISTATS_MAX_CONCURRENT)
 
     async def get_package_info(self, package_name: str) -> dict[str, Any]:
         try:
-            response = await self._client.get(f"{PYPI_API_BASE}/pypi/{package_name}/json")
+            response = await self._pypi_client.get(f"/pypi/{package_name}/json")
             response.raise_for_status()
             return response.json()
         except httpx.HTTPStatusError as e:
             raise ApiError(f"PyPI API error for {package_name}: {e}", e.response.status_code) from e
 
-    async def search_packages(self, query: str) -> list[dict[str, Any]]:
-        """Search PyPI using the simple API / XML-RPC is deprecated.
-        We use a workaround: search via pypi.org/search is not API-based.
-        Instead, we search GitHub for flet-related Python repos and cross-reference PyPI.
-        """
-        return []
-
     async def get_recent_downloads(self, package_name: str) -> int:
-        try:
-            response = await self._client.get(
-                f"{PYPISTATS_API_BASE}/packages/{package_name}/recent",
-            )
-            response.raise_for_status()
-            data = response.json()
-            return data.get("data", {}).get("last_month", 0)
-        except httpx.HTTPError:
-            logger.warning("Could not fetch download stats for %s", package_name)
-            return 0
+        """Get recent downloads with semaphore + retry for 429."""
+        for attempt in range(MAX_RETRIES + 1):
+            try:
+                async with self._stats_semaphore:
+                    response = await self._stats_client.get(
+                        f"/packages/{package_name}/recent",
+                    )
+                if response.status_code == 429:
+                    if attempt < MAX_RETRIES:
+                        wait = float(response.headers.get("Retry-After", 2**attempt))
+                        logger.warning(
+                            "429 from pypistats for %s, retry %d in %ss",
+                            package_name,
+                            attempt + 1,
+                            wait,
+                        )
+                        await asyncio.sleep(wait)
+                        continue
+                    logger.warning("pypistats 429 exhausted retries for %s", package_name)
+                    return 0
+                response.raise_for_status()
+                data = response.json()
+                return data.get("data", {}).get("last_month", 0)
+            except httpx.HTTPError:
+                logger.warning("Could not fetch download stats for %s", package_name)
+                return 0
+        return 0
 
     async def get_package_dependencies(self, package_name: str) -> list[str]:
         try:
@@ -51,4 +79,5 @@ class PyPISource:
             return []
 
     async def close(self) -> None:
-        await self._client.aclose()
+        await self._pypi_client.aclose()
+        await self._stats_client.aclose()

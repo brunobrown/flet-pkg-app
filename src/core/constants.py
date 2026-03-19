@@ -7,6 +7,17 @@ FLET_REPO = "flet"
 FLET_PACKAGES_PATH = "sdk/python/packages"
 
 CACHE_TTL_SECONDS = 300  # 5 minutes
+CACHE_TTL_DOWNLOADS = 86400  # 24h — download stats refresh once per day
+
+# ClickHouse public PyPI stats
+CLICKHOUSE_URL = "https://sql-clickhouse.clickhouse.com"
+CLICKHOUSE_USER = "demo"
+CLICKHOUSE_PASSWORD = ""
+
+# Rate limiting
+PYPISTATS_MAX_CONCURRENT = 3
+GITHUB_MAX_CONCURRENT = 10
+MAX_RETRIES = 3
 
 PACKAGES_PER_PAGE = 10
 
