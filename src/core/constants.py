@@ -32,7 +32,7 @@ SORT_OPTIONS = [
 
 PACKAGE_TYPES = ["UI Controls", "Services"]
 
-# Packages to EXCLUDE from results (framework core, not extensions)
+# Core framework packages — EXCLUDED from results (not extensions)
 EXCLUDED_PACKAGES = {
     "flet",
     "flet-cli",
@@ -41,67 +41,38 @@ EXCLUDED_PACKAGES = {
     "flet-runtime",
 }
 
-# Official Flet EXTENSION packages from flet-dev/flet monorepo
-# These are the actual extensions (not core framework)
-OFFICIAL_EXTENSION_PACKAGES = [
-    "flet-ads",
-    "flet-audio",
-    "flet-audio-recorder",
-    "flet-camera",
-    "flet-charts",
-    "flet-code-editor",
-    "flet-color-pickers",
-    "flet-datatable2",
-    "flet-flashlight",
-    "flet-geolocator",
-    "flet-lottie",
-    "flet-map",
-    "flet-permission-handler",
-    "flet-rive",
-    "flet-secure-storage",
-    "flet-video",
-    "flet-webview",
+# Heuristic keywords to classify Service vs UI Control by summary text.
+# If none match, defaults to Python Package.
+SERVICE_KEYWORDS = [
+    "service",
+    "storage",
+    "permission",
+    "geolocation",
+    "geolocator",
+    "flashlight",
+    "torch",
+    "push notification",
+    "onesignal",
+    "ads",
+    "audio record",
+    "audio playback",
+    "audio integration",
 ]
 
-# Classification: Flutter extensions for Flet — Services
-# Services = ft.Service — SDKs, background services, platform APIs, no visual widget
-KNOWN_SERVICE_EXTENSIONS = {
-    "flet-ads",
-    "flet-audio",
-    "flet-audio-recorder",
-    "flet-flashlight",
-    "flet-geolocator",
-    "flet-permission-handler",
-    "flet-secure-storage",
-    "flet-onesignal",
-}
-
-# Classification: Flutter extensions for Flet — UI Controls
-# UI Controls = ft.LayoutControl — widgets that render on screen
-KNOWN_UI_CONTROL_EXTENSIONS = {
-    "flet-camera",
-    "flet-charts",
-    "flet-code-editor",
-    "flet-color-pickers",
-    "flet-datatable2",
-    "flet-lottie",
-    "flet-map",
-    "flet-rive",
-    "flet-video",
-    "flet-webview",
-}
-
-# Known community Flet extension packages (third-party, not in monorepo)
-KNOWN_COMMUNITY_EXTENSIONS = {
-    "flet-onesignal",
-    "fletmint",
-    "flet-easy",
-    "flet-storyboard",
-}
-
-# Known Python packages that are useful with Flet but NOT Flutter extensions
-KNOWN_PYTHON_FLET_PACKAGES = [
-    "fletmint",
-    "flet-easy",
-    "flet-storyboard",
+UI_CONTROL_KEYWORDS = [
+    "control",
+    "widget",
+    "chart",
+    "map",
+    "video",
+    "camera",
+    "webview",
+    "animation",
+    "lottie",
+    "rive",
+    "table",
+    "datatable",
+    "editor",
+    "code editor",
+    "color picker",
 ]

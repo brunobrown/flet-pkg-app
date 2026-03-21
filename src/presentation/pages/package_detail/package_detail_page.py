@@ -1,7 +1,6 @@
 import flet as ft
 
 from src.presentation.components.common.loading import ErrorMessage, LoadingIndicator
-from src.presentation.hooks.use_packages import load_package_detail_by_name
 from src.presentation.state_management.global_state import PackagesState, UserState
 from src.presentation.themes.colors import DARK_ACCENT, DARK_CARD, DARK_DIVIDER, TAG_BG, TAG_COLOR
 from src.services.api_service import ApiService
@@ -18,34 +17,14 @@ def PackageDetailPage(
     on_back: object,
 ) -> ft.Control:
     active_tab, set_active_tab = ft.use_state(0)
-    is_starred, set_is_starred = ft.use_state(False)
-    loading, set_loading = ft.use_state(True)
-    error, set_error = ft.use_state("")
 
-    async def _load_detail():
-        set_loading(True)
-        set_error("")
-        try:
-            await load_package_detail_by_name(state, api, package_name)
-        except Exception as e:
-            set_error(str(e))
-        set_loading(False)
-
-    ft.use_effect(_load_detail, dependencies=[package_name])
-
-    if loading:
-        return LoadingIndicator("Loading package details...")
-
-    if error:
-        return ErrorMessage(error)
-
+    # State-driven: data is loaded by navigate() BEFORE this component renders
     pkg = state.detail_package
     if not pkg:
-        return ErrorMessage("Package not found")
+        return LoadingIndicator("Loading package details...")
 
-    def handle_star(_e: ft.ControlEvent) -> None:
-        # Star/unstar requires GitHub OAuth — not yet implemented
-        pass
+    if state.error:
+        return ErrorMessage(state.error)
 
     def handle_copy(_e: ft.ControlEvent) -> None:
         if on_copy:
@@ -91,13 +70,12 @@ def PackageDetailPage(
             )
         )
     if not doc_controls:
-        doc_controls.append(ft.Text("No documentation links available", color="#9e9e9e"))
+        doc_controls.append(ft.Text("No documentation links available", color="#8A92A2"))
     docs_view = ft.Container(
         content=ft.Column(controls=doc_controls, spacing=12),
         padding=20,
     )
 
-    # Topics
     topic_chips = [
         ft.Container(
             content=ft.Text(f"#{t}", size=12, color=TAG_COLOR),
@@ -108,9 +86,8 @@ def PackageDetailPage(
         for t in pkg.topics
     ]
 
-    dep_controls = [ft.Text(d, size=12, color="#bdbdbd") for d in (pkg.dependencies or [])[:20]]
+    dep_controls = [ft.Text(d, size=12, color="#B6BBC7") for d in (pkg.dependencies or [])[:20]]
 
-    # Sidebar
     sidebar = ft.Container(
         content=ft.Column(
             controls=[
@@ -149,19 +126,19 @@ def PackageDetailPage(
                     "Topics",
                     [ft.Row(controls=topic_chips, wrap=True, spacing=4)]
                     if topic_chips
-                    else [ft.Text("No topics", size=12, color="#757575")],
+                    else [ft.Text("No topics", size=12, color="#8A92A2")],
                 ),
                 ft.Divider(color=DARK_DIVIDER),
                 _sidebar_section(
                     "License",
-                    [ft.Text(pkg.license or "Unknown", size=14, color="#bdbdbd")],
+                    [ft.Text(pkg.license or "Unknown", size=14, color="#B6BBC7")],
                 ),
                 ft.Divider(color=DARK_DIVIDER),
                 _sidebar_section(
                     "Dependencies",
                     dep_controls
                     if dep_controls
-                    else [ft.Text("No dependencies", size=12, color="#757575")],
+                    else [ft.Text("No dependencies", size=12, color="#8A92A2")],
                 ),
             ],
             spacing=8,
@@ -174,7 +151,6 @@ def PackageDetailPage(
 
     return ft.Column(
         controls=[
-            # Package header
             ft.Container(
                 content=ft.Column(
                     controls=[
@@ -194,7 +170,7 @@ def PackageDetailPage(
                                 ft.IconButton(
                                     icon=ft.Icons.COPY,
                                     icon_size=16,
-                                    icon_color="#9e9e9e",
+                                    icon_color="#8A92A2",
                                     tooltip=pkg.pip_install_command,
                                     on_click=handle_copy,
                                 ),
@@ -206,24 +182,24 @@ def PackageDetailPage(
                                 ft.Text(
                                     f"Published {format_date(pkg.updated_at)}",
                                     size=13,
-                                    color="#9e9e9e",
+                                    color="#8A92A2",
                                 ),
                                 ft.Text(
                                     f"by {pkg.publisher}" if pkg.publisher else "",
                                     size=13,
-                                    color="#9e9e9e",
+                                    color="#8A92A2",
                                 ),
                                 ft.Row(
                                     controls=[
                                         ft.Icon(
-                                            ft.Icons.THUMB_UP
-                                            if is_starred
-                                            else ft.Icons.THUMB_UP_OUTLINED,
+                                            ft.Icons.THUMB_UP_OUTLINED,
                                             size=16,
                                             color=DARK_ACCENT,
                                         ),
                                         ft.Text(
-                                            format_number(pkg.stars), size=13, color=DARK_ACCENT
+                                            format_number(pkg.stars),
+                                            size=13,
+                                            color=DARK_ACCENT,
                                         ),
                                     ],
                                     spacing=4,
@@ -236,10 +212,8 @@ def PackageDetailPage(
                 ),
                 padding=ft.Padding(left=20, top=16, right=20, bottom=16),
             ),
-            # Tabs + Sidebar
             ft.Row(
                 controls=[
-                    # Main content with tabs
                     ft.Container(
                         content=ft.Tabs(
                             length=3,
@@ -255,7 +229,7 @@ def PackageDetailPage(
                                         ],
                                         indicator_color=DARK_ACCENT,
                                         label_color=DARK_ACCENT,
-                                        unselected_label_color="#9e9e9e",
+                                        unselected_label_color="#8A92A2",
                                     ),
                                     ft.TabBarView(
                                         controls=[
@@ -296,8 +270,8 @@ def _sidebar_section(title: str, controls: list[ft.Control]) -> ft.Control:
 def _stat_row(icon: ft.Icons, label: str, value: str) -> ft.Control:
     return ft.Row(
         controls=[
-            ft.Icon(icon, size=16, color="#9e9e9e"),
-            ft.Text(label, size=13, color="#9e9e9e"),
+            ft.Icon(icon, size=16, color="#8A92A2"),
+            ft.Text(label, size=13, color="#8A92A2"),
             ft.Container(expand=True),
             ft.Text(value, size=13, color=DARK_ACCENT, weight=ft.FontWeight.BOLD),
         ],

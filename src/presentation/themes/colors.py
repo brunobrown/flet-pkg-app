@@ -1,21 +1,21 @@
 import flet as ft
 
 # Flet logo palette
-FLET_PINK = "#EE3167"
-FLET_BLUE = "#0098DA"
-FLET_BLUE_LIGHT = "#5ABAE7"
+FLET_PINK = "#E1386B"
+FLET_BLUE = "#59A3DC"
+FLET_BLUE_LIGHT = "#6CB2E2"
 
-# Dark theme colors (harmonized with Flet logo blues)
-DARK_BG = "#1a1a2e"
-DARK_SURFACE = "#1e2337"
-DARK_CARD = "#252a3e"
-DARK_HEADER = "#16213e"
-DARK_TEXT = "#e0e0e0"
-DARK_TEXT_SECONDARY = "#9e9e9e"
-DARK_ACCENT = FLET_BLUE_LIGHT  # was #00bcd4, now matches logo
+# Dark theme colors (from Stitch design SVG)
+DARK_BG = "#081425"
+DARK_SURFACE = "#14253A"
+DARK_CARD = "#232831"
+DARK_HEADER = "#081425"
+DARK_TEXT = "#EFF0F3"
+DARK_TEXT_SECONDARY = "#8A92A2"
+DARK_ACCENT = FLET_BLUE_LIGHT
 DARK_ACCENT_LIGHT = FLET_BLUE_LIGHT
-DARK_DIVIDER = "#2d3250"
-DARK_SEARCH_BG = "#2d3250"
+DARK_DIVIDER = "#354457"
+DARK_SEARCH_BG = "#232831"
 
 # Light theme colors
 LIGHT_BG = "#f5f5f5"

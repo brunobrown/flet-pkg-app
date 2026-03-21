@@ -2,7 +2,7 @@ import flet as ft
 
 from src.domain.entities.package import Package
 from src.presentation.components.common.package_card import PackageCardSmall
-from src.presentation.themes.colors import DARK_ACCENT, DARK_DIVIDER
+from src.presentation.themes.colors import DARK_ACCENT
 
 
 @ft.component
@@ -20,10 +20,6 @@ def PackageSection(
 
     visible = packages[:max_cards]
 
-    # Each card gets a responsive col value:
-    # Desktop (LG): cols_per_row cards per row → col = 12 / cols_per_row
-    # Tablet (MD): 2 per row → col = 6
-    # Mobile (XS): 1 per row → col = 12
     col_lg = 12 // cols_per_row
 
     cards = []
@@ -32,7 +28,7 @@ def PackageSection(
             ft.Container(
                 content=PackageCardSmall(pkg, on_package_click),
                 col={
-                    ft.ResponsiveRowBreakpoint.XS: 12,
+                    ft.ResponsiveRowBreakpoint.XS: 6,
                     ft.ResponsiveRowBreakpoint.SM: 6,
                     ft.ResponsiveRowBreakpoint.MD: 6,
                     ft.ResponsiveRowBreakpoint.LG: col_lg,
@@ -40,32 +36,25 @@ def PackageSection(
             )
         )
 
-    controls: list[ft.Control] = [
+    # Section header
+    header_controls: list[ft.Control] = [
         ft.Text(
             title,
-            size=22,
-            weight=ft.FontWeight.W_500,
-            color=DARK_ACCENT,
+            size=18,
+            weight=ft.FontWeight.W_600,
+            color="#EFF0F3",
         ),
     ]
 
     if description:
-        controls.append(
-            ft.Text(description, size=14, color="#9e9e9e"),
+        header_controls.append(
+            ft.Text(description, size=13, color="#8A92A2"),
         )
 
-    controls.append(ft.Container(height=16))
-
-    controls.append(
-        ft.ResponsiveRow(
-            controls=cards,
-            spacing=12,
-            run_spacing=12,
-        )
-    )
-
+    # VIEW ALL link
+    footer: list[ft.Control] = []
     if on_view_all:
-        controls.append(
+        footer.append(
             ft.Container(
                 content=ft.TextButton(
                     "VIEW ALL",
@@ -77,8 +66,22 @@ def PackageSection(
             )
         )
 
+    # Section container with background (like in the design)
     return ft.Container(
-        content=ft.Column(controls=controls, spacing=4),
-        padding=ft.Padding(left=40, top=30, right=40, bottom=20),
-        border=ft.Border(bottom=ft.BorderSide(1, DARK_DIVIDER)),
+        content=ft.Column(
+            controls=[
+                # Header
+                ft.Column(controls=header_controls, spacing=2),
+                ft.Container(height=12),
+                # Cards grid
+                ft.ResponsiveRow(controls=cards, spacing=10, run_spacing=10),
+                # Footer
+                *footer,
+            ],
+            spacing=0,
+        ),
+        bgcolor="#14253A",
+        border_radius=12,
+        padding=ft.Padding(left=20, top=20, right=20, bottom=16),
+        margin=ft.Margin(left=20, top=16, right=20, bottom=0),
     )
