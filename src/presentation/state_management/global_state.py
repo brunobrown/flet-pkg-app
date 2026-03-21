@@ -75,3 +75,6 @@ class AppState:
     # Current route — changing this triggers UI re-render
     current_route: str = "/"
     detail_package_name: str = ""
+
+    # Theme — direct field on AppState so changes trigger AppRoot re-render
+    is_dark: bool = True

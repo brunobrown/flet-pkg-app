@@ -57,8 +57,30 @@ class PackageDiscovery:
         self._pypi = pypi
         self._cache = cache
 
+    # Fallback: known official extensions discovered from the monorepo.
+    # Used when GitHub API is rate-limited (403). Updated automatically when API works.
+    _FALLBACK_OFFICIAL = [
+        "flet-ads",
+        "flet-audio",
+        "flet-audio-recorder",
+        "flet-camera",
+        "flet-charts",
+        "flet-code-editor",
+        "flet-color-pickers",
+        "flet-datatable2",
+        "flet-flashlight",
+        "flet-geolocator",
+        "flet-lottie",
+        "flet-map",
+        "flet-permission-handler",
+        "flet-rive",
+        "flet-secure-storage",
+        "flet-video",
+        "flet-webview",
+    ]
+
     async def get_official_extension_names(self) -> list[str]:
-        """Discover official extensions from the GitHub monorepo."""
+        """Discover official extensions from the GitHub monorepo (with fallback)."""
         cache_key = "discovery:official_names"
         cached = self._cache.get(cache_key)
         if cached is not None:
@@ -71,11 +93,17 @@ class PackageDiscovery:
                 for item in contents
                 if item.get("type") == "dir" and item["name"] not in EXCLUDED_PACKAGES
             ]
-            self._cache.set(cache_key, names)
-            return names
+            if names:
+                # Cache for 24h — monorepo changes rarely
+                self._cache.set(cache_key, names, ttl=86400)
+                return names
         except Exception as e:
-            logger.error("Failed to discover official packages: %s", e)
-            return []
+            logger.warning("GitHub API unavailable for official packages: %s", e)
+
+        # Fallback when GitHub is rate-limited or unavailable
+        logger.info("Using fallback official package list")
+        self._cache.set(cache_key, self._FALLBACK_OFFICIAL, ttl=3600)
+        return self._FALLBACK_OFFICIAL
 
     async def fetch_pypi_package(self, name: str) -> Package | None:
         """Fetch a package from PyPI and classify it."""

@@ -279,7 +279,7 @@ class PackageRepositoryImpl(PackageRepository):
 
             await self._enrich_with_downloads(packages)
             packages.sort(key=lambda p: p.downloads, reverse=True)
-            self._cache.set(cache_key, packages[:5])
+            self._cache.set(cache_key, packages[:5], ttl=3600)
             return packages[:5]
         except Exception as e:
             logger.error("Error fetching official packages: %s", e)
@@ -309,7 +309,7 @@ class PackageRepositoryImpl(PackageRepository):
 
             await self._enrich_with_downloads(packages)
             packages = packages[:limit]
-            self._cache.set(cache_key, packages)
+            self._cache.set(cache_key, packages, ttl=3600)
             return packages
         except Exception as e:
             logger.error("Error fetching trending packages: %s", e)
@@ -337,7 +337,7 @@ class PackageRepositoryImpl(PackageRepository):
 
             await self._enrich_with_downloads(packages)
             packages.sort(key=lambda p: p.downloads, reverse=True)
-            self._cache.set(cache_key, packages[:limit])
+            self._cache.set(cache_key, packages[:limit], ttl=3600)
             return packages[:limit]
         except Exception as e:
             logger.error("Error fetching service packages: %s", e)
@@ -364,7 +364,7 @@ class PackageRepositoryImpl(PackageRepository):
 
             await self._enrich_with_downloads(packages)
             packages.sort(key=lambda p: p.downloads, reverse=True)
-            self._cache.set(cache_key, packages[:limit])
+            self._cache.set(cache_key, packages[:limit], ttl=3600)
             return packages[:limit]
         except Exception as e:
             logger.error("Error fetching UI control packages: %s", e)
@@ -395,7 +395,7 @@ class PackageRepositoryImpl(PackageRepository):
 
             await self._enrich_with_downloads(packages)
             packages = packages[:limit]
-            self._cache.set(cache_key, packages)
+            self._cache.set(cache_key, packages, ttl=3600)
             return packages
         except Exception as e:
             logger.error("Error fetching Python packages: %s", e)
@@ -433,7 +433,7 @@ class PackageRepositoryImpl(PackageRepository):
             for pkg in packages:
                 pkg.package_type = classify_by_summary(pkg.description, pkg.name)
 
-            self._cache.set(cache_key, packages)
+            self._cache.set(cache_key, packages, ttl=3600)
             return packages
         except Exception:
             return []

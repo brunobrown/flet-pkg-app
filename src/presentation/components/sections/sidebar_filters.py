@@ -1,7 +1,5 @@
 import flet as ft
 
-from src.presentation.themes.colors import DARK_ACCENT, DARK_CARD, DARK_DIVIDER
-
 
 @ft.component
 def SidebarFilters(
@@ -17,16 +15,12 @@ def SidebarFilters(
     return ft.Container(
         content=ft.Column(
             controls=[
-                # Type section
                 ft.Row(
                     controls=[
                         ft.Text(
-                            "Type",
-                            size=16,
-                            weight=ft.FontWeight.BOLD,
-                            color=ft.Colors.WHITE,
+                            "Type", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.ON_SURFACE
                         ),
-                        ft.Icon(ft.Icons.EXPAND_LESS, color="#9e9e9e", size=20),
+                        ft.Icon(ft.Icons.EXPAND_LESS, color=ft.Colors.ON_SURFACE_VARIANT, size=20),
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 ),
@@ -35,8 +29,8 @@ def SidebarFilters(
                     label="UI Controls",
                     value=filter_ui,
                     on_change=lambda e: on_filter_ui(e.data == "true") if on_filter_ui else None,
-                    check_color=ft.Colors.WHITE,
-                    active_color=DARK_ACCENT,
+                    check_color=ft.Colors.ON_PRIMARY,
+                    active_color=ft.Colors.PRIMARY,
                 ),
                 ft.Checkbox(
                     label="Services",
@@ -44,22 +38,21 @@ def SidebarFilters(
                     on_change=lambda e: (
                         on_filter_services(e.data == "true") if on_filter_services else None
                     ),
-                    check_color=ft.Colors.WHITE,
-                    active_color=DARK_ACCENT,
+                    check_color=ft.Colors.ON_PRIMARY,
+                    active_color=ft.Colors.PRIMARY,
                 ),
                 ft.Container(height=16),
-                ft.Divider(color=DARK_DIVIDER),
+                ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
                 ft.Container(height=8),
-                # Advanced section
                 ft.Row(
                     controls=[
                         ft.Text(
                             "Advanced",
                             size=16,
                             weight=ft.FontWeight.BOLD,
-                            color=ft.Colors.WHITE,
+                            color=ft.Colors.ON_SURFACE,
                         ),
-                        ft.Icon(ft.Icons.EXPAND_LESS, color="#9e9e9e", size=20),
+                        ft.Icon(ft.Icons.EXPAND_LESS, color=ft.Colors.ON_SURFACE_VARIANT, size=20),
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 ),
@@ -70,8 +63,8 @@ def SidebarFilters(
                     on_change=lambda e: (
                         on_filter_official(e.data == "true") if on_filter_official else None
                     ),
-                    check_color=ft.Colors.WHITE,
-                    active_color=DARK_ACCENT,
+                    check_color=ft.Colors.ON_PRIMARY,
+                    active_color=ft.Colors.PRIMARY,
                 ),
                 ft.Checkbox(
                     label="Has screenshot",
@@ -79,13 +72,13 @@ def SidebarFilters(
                     on_change=lambda e: (
                         on_filter_screenshot(e.data == "true") if on_filter_screenshot else None
                     ),
-                    check_color=ft.Colors.WHITE,
-                    active_color=DARK_ACCENT,
+                    check_color=ft.Colors.ON_PRIMARY,
+                    active_color=ft.Colors.PRIMARY,
                 ),
             ],
         ),
         width=220,
         padding=20,
-        bgcolor=DARK_CARD,
+        bgcolor=ft.Colors.SURFACE_CONTAINER,
         border_radius=8,
     )

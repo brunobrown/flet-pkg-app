@@ -1,41 +1,28 @@
-import flet as ft
+"""Color constants.
 
-# Flet logo palette
+For theme-aware colors, use ft.Colors.* (PRIMARY, SURFACE, ON_SURFACE, etc.)
+which automatically switch between dark/light via ColorScheme in app_theme.py.
+
+Only use these constants for:
+- Flet logo colors (always the same)
+- Hero gradient (intentionally always dark)
+- Legacy code that hasn't been migrated yet
+"""
+
+# Flet logo palette (fixed, not theme-dependent)
 FLET_PINK = "#E1386B"
 FLET_BLUE = "#59A3DC"
 FLET_BLUE_LIGHT = "#6CB2E2"
 
-# Dark theme colors (from Stitch design SVG)
+# Hero section gradient (intentionally always dark, like pub.dev)
+HERO_GRADIENT = ("#1e3a5f", "#2c5282", "#1e3a5f")
+HERO_SEARCH_BG = "#232831"
+
+# Legacy aliases — used during migration, prefer ft.Colors.* instead
 DARK_BG = "#081425"
 DARK_SURFACE = "#14253A"
 DARK_CARD = "#232831"
 DARK_HEADER = "#081425"
-DARK_TEXT = "#EFF0F3"
-DARK_TEXT_SECONDARY = "#8A92A2"
 DARK_ACCENT = FLET_BLUE_LIGHT
-DARK_ACCENT_LIGHT = FLET_BLUE_LIGHT
 DARK_DIVIDER = "#354457"
-DARK_SEARCH_BG = "#232831"
-
-# Light theme colors
 LIGHT_BG = "#f5f5f5"
-LIGHT_SURFACE = "#ffffff"
-LIGHT_CARD = "#ffffff"
-LIGHT_HEADER = FLET_BLUE
-LIGHT_TEXT = "#212121"
-LIGHT_TEXT_SECONDARY = "#757575"
-LIGHT_ACCENT = FLET_BLUE
-LIGHT_DIVIDER = "#e0e0e0"
-LIGHT_SEARCH_BG = "#e8e8e8"
-
-# Shared colors
-STAR_COLOR = FLET_BLUE_LIGHT
-DOWNLOAD_COLOR = FLET_BLUE_LIGHT
-TAG_COLOR = FLET_BLUE_LIGHT
-TAG_BG = "#1a3a4a"
-SUCCESS_COLOR = "#4caf50"
-ERROR_COLOR = "#f44336"
-
-# Flet color references
-PRIMARY_COLOR = ft.Colors.CYAN_400
-SURFACE_COLOR = ft.Colors.SURFACE

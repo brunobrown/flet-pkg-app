@@ -1,8 +1,9 @@
+"""Package section — uses ft.Colors.* for theme-aware colors."""
+
 import flet as ft
 
 from src.domain.entities.package import Package
 from src.presentation.components.common.package_card import PackageCardSmall
-from src.presentation.themes.colors import DARK_ACCENT
 
 
 @ft.component
@@ -19,7 +20,6 @@ def PackageSection(
         return ft.Container()
 
     visible = packages[:max_cards]
-
     col_lg = 12 // cols_per_row
 
     cards = []
@@ -36,22 +36,20 @@ def PackageSection(
             )
         )
 
-    # Section header
     header_controls: list[ft.Control] = [
         ft.Text(
             title,
             size=18,
             weight=ft.FontWeight.W_600,
-            color="#EFF0F3",
+            color=ft.Colors.ON_SURFACE,
         ),
     ]
 
     if description:
         header_controls.append(
-            ft.Text(description, size=13, color="#8A92A2"),
+            ft.Text(description, size=13, color=ft.Colors.ON_SURFACE_VARIANT),
         )
 
-    # VIEW ALL link
     footer: list[ft.Control] = []
     if on_view_all:
         footer.append(
@@ -59,28 +57,24 @@ def PackageSection(
                 content=ft.TextButton(
                     "VIEW ALL",
                     on_click=lambda _: on_view_all(),
-                    style=ft.ButtonStyle(color=DARK_ACCENT),
+                    style=ft.ButtonStyle(color=ft.Colors.PRIMARY),
                 ),
                 alignment=ft.Alignment.CENTER_RIGHT,
                 padding=ft.Padding(left=0, top=4, right=0, bottom=0),
             )
         )
 
-    # Section container with background (like in the design)
     return ft.Container(
         content=ft.Column(
             controls=[
-                # Header
                 ft.Column(controls=header_controls, spacing=2),
                 ft.Container(height=12),
-                # Cards grid
                 ft.ResponsiveRow(controls=cards, spacing=10, run_spacing=10),
-                # Footer
                 *footer,
             ],
             spacing=0,
         ),
-        bgcolor="#14253A",
+        bgcolor=ft.Colors.SURFACE_CONTAINER,
         border_radius=12,
         padding=ft.Padding(left=20, top=20, right=20, bottom=16),
         margin=ft.Margin(left=20, top=16, right=20, bottom=0),

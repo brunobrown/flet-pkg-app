@@ -1,5 +1,6 @@
 import flet as ft
 
+from src.presentation.components.common.footer import AppFooter
 from src.presentation.components.common.loading import LoadingIndicator
 from src.presentation.components.common.search_bar import HeroSearchBar
 from src.presentation.components.sections.package_section import PackageSection
@@ -94,6 +95,8 @@ def HomePage(
                 on_view_all=on_view_all,
             )
         )
+
+    sections.append(AppFooter())
 
     return ft.Column(
         controls=sections,

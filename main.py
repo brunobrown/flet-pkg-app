@@ -22,8 +22,28 @@ from src.presentation.pages.package_detail.package_detail_page import PackageDet
 from src.presentation.pages.packages.packages_page import PackagesPage
 from src.presentation.state_management.global_state import AppState
 from src.presentation.themes.app_theme import get_dark_theme, get_light_theme
-from src.presentation.themes.colors import DARK_BG, LIGHT_BG
+from src.presentation.themes.colors import DARK_BG
 from src.services.api_service import ApiService
+
+
+def _patch_session_dispatch(session) -> None:
+    """Patch session.dispatch_event to skip orphaned controls (no parent chain).
+
+    Prevents SESSION_CRASHED when a control receives an event after being
+    removed from the page tree during a re-render.
+    """
+    import logging
+
+    original_dispatch = session.dispatch_event
+
+    async def safe_dispatch(control_id, event_name, event_data):
+        control = session._Session__index.get(control_id)
+        if control and control.parent is None:
+            logging.debug("Skipping event on orphaned control %s", control_id)
+            return
+        await original_dispatch(control_id, event_name, event_data)
+
+    session.dispatch_event = safe_dispatch
 
 
 def main(page: ft.Page) -> None:
@@ -35,6 +55,9 @@ def main(page: ft.Page) -> None:
     page.padding = 0
     page.spacing = 0
 
+    # Prevent crash on orphaned control events during navigation
+    _patch_session_dispatch(page.session)
+
     # --- Dependency wiring ---
     app_state = AppState()
     api = ApiService()
@@ -42,7 +65,7 @@ def main(page: ft.Page) -> None:
 
     # --- Callbacks ---
     def handle_theme_toggle() -> None:
-        toggle_theme_mode(page, app_state.theme)
+        toggle_theme_mode(page, app_state)
 
     def open_drawer() -> None:
         page.run_task(page.show_drawer)
@@ -69,12 +92,16 @@ def main(page: ft.Page) -> None:
             ),
             ft.Divider(color="#354457"),
             ft.NavigationDrawerDestination(
-                label="About Flet PKG",
-                icon=ft.Icons.INFO_OUTLINE,
+                label="Introduction",
+                icon=ft.Icons.MENU_BOOK,
             ),
             ft.NavigationDrawerDestination(
-                label="Flet Documentation",
-                icon=ft.Icons.BOOK,
+                label="API Reference",
+                icon=ft.Icons.CODE,
+            ),
+            ft.NavigationDrawerDestination(
+                label="About Flet PKG",
+                icon=ft.Icons.INFO_OUTLINE,
             ),
         ],
         bgcolor="#14253A",
@@ -136,8 +163,6 @@ def main(page: ft.Page) -> None:
     @ft.component
     def AppRoot(state: AppState) -> list[ft.Control]:
         route_parsed = parse_route(state.current_route)
-        is_dark = state.theme.is_dark
-        bg = DARK_BG if is_dark else LIGHT_BG
 
         if route_parsed.is_package_detail:
             page_content = PackageDetailPage(
@@ -171,8 +196,16 @@ def main(page: ft.Page) -> None:
                         on_theme_toggle=handle_theme_toggle,
                         on_open_drawer=open_drawer,
                         on_navigate_home=lambda: navigate("/"),
+                        on_search=handle_search if route_parsed.is_packages else None,
+                        is_dark=state.is_dark,
+                        show_logo=not route_parsed.is_home,
+                        search_query=state.packages.search_query,
                     ),
-                    ft.Container(content=page_content, expand=True, bgcolor=bg),
+                    ft.Container(
+                        content=page_content,
+                        expand=True,
+                        bgcolor=ft.Colors.SURFACE_CONTAINER_LOWEST,
+                    ),
                 ],
                 spacing=0,
                 expand=True,

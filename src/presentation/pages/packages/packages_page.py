@@ -1,12 +1,12 @@
 import flet as ft
 
 from src.core.constants import PACKAGES_PER_PAGE, SORT_OPTIONS
+from src.presentation.components.common.footer import AppFooter
 from src.presentation.components.common.loading import ErrorMessage, LoadingIndicator
 from src.presentation.components.common.package_card import PackageCard
 from src.presentation.components.common.pagination import Pagination
 from src.presentation.components.sections.sidebar_filters import SidebarFilters
 from src.presentation.state_management.global_state import PackagesState
-from src.presentation.themes.colors import DARK_ACCENT, DARK_CARD
 from src.services.api_service import ApiService
 
 
@@ -45,7 +45,7 @@ def PackagesPage(
     elif not state.packages:
         package_list.append(
             ft.Container(
-                content=ft.Text("No packages found", color="#8A92A2", size=16),
+                content=ft.Text("No packages found", color=ft.Colors.ON_SURFACE_VARIANT, size=16),
                 padding=40,
                 alignment=ft.Alignment.CENTER,
             )
@@ -93,19 +93,27 @@ def PackagesPage(
                                                     size=12,
                                                     color=ft.Colors.WHITE,
                                                 ),
-                                                bgcolor=DARK_ACCENT,
+                                                bgcolor=ft.Colors.PRIMARY,
                                                 border_radius=4,
                                                 padding=ft.Padding(
                                                     left=6, top=2, right=6, bottom=2
                                                 ),
                                             ),
-                                            ft.Text("packages", size=14, color="#8A92A2"),
+                                            ft.Text(
+                                                "packages",
+                                                size=14,
+                                                color=ft.Colors.ON_SURFACE_VARIANT,
+                                            ),
                                         ],
                                         spacing=8,
                                     ),
                                     ft.Row(
                                         controls=[
-                                            ft.Text("SORT BY", size=12, color="#8A92A2"),
+                                            ft.Text(
+                                                "SORT BY",
+                                                size=12,
+                                                color=ft.Colors.ON_SURFACE_VARIANT,
+                                            ),
                                             ft.Dropdown(
                                                 value=state.sort_by,
                                                 options=sort_items,
@@ -113,9 +121,9 @@ def PackagesPage(
                                                 width=180,
                                                 height=36,
                                                 text_size=12,
-                                                border_color=DARK_ACCENT,
-                                                color=DARK_ACCENT,
-                                                bgcolor=DARK_CARD,
+                                                border_color=ft.Colors.PRIMARY,
+                                                color=ft.Colors.PRIMARY,
+                                                bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
                                             ),
                                         ],
                                         spacing=8,
@@ -132,6 +140,7 @@ def PackagesPage(
                             per_page=PACKAGES_PER_PAGE,
                             on_page_change=lambda p: None,
                         ),
+                        AppFooter(),
                     ],
                     scroll=ft.ScrollMode.AUTO,
                     expand=True,
