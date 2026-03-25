@@ -1,10 +1,11 @@
-"""Package detail page — uses ft.Colors.* for theme-aware colors."""
+"""Package detail page — fixed tabs, scrollable content, slide-in sidebar."""
 
 import flet as ft
 
 from src.presentation.components.common.footer import AppFooter
 from src.presentation.components.common.loading import ErrorMessage, LoadingIndicator
 from src.presentation.state_management.global_state import PackagesState, UserState
+from src.presentation.themes.colors import FLET_PINK
 from src.services.api_service import ApiService
 from src.utils.formatters import format_date, format_number
 
@@ -19,143 +20,242 @@ def PackageDetailPage(
     on_back: object,
 ) -> ft.Control:
     active_tab, set_active_tab = ft.use_state(0)
+    sidebar_open, set_sidebar_open = ft.use_state(False)
+
+    if state.error:
+        return ErrorMessage(state.error)
 
     pkg = state.detail_package
     if not pkg:
         return LoadingIndicator("Loading package details...")
 
-    if state.error:
-        return ErrorMessage(state.error)
-
     def handle_copy(_e: ft.ControlEvent) -> None:
         if on_copy:
             on_copy(pkg.pip_install_command)
 
-    readme_view = ft.Container(
-        content=ft.Markdown(
-            value=pkg.readme or "No README available",
+    # --- Tab content ---
+    if active_tab == 1:
+        changelog_text = _clean_readme(pkg.changelog) if pkg.changelog else "No changelog available"
+        tab_content = ft.Markdown(
+            value=changelog_text,
+            selectable=True,
+            extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+            shrink_wrap=True,
+            fit_content=True,
+        )
+    elif active_tab == 2:
+        doc_controls: list[ft.Control] = []
+        if pkg.documentation_url:
+            doc_controls.append(
+                ft.TextButton(
+                    "Documentation",
+                    icon=ft.Icons.BOOK,
+                    url=pkg.documentation_url,
+                    style=ft.ButtonStyle(color=ft.Colors.PRIMARY),
+                )
+            )
+        if pkg.repository_url:
+            doc_controls.append(
+                ft.TextButton(
+                    "GitHub Repository",
+                    icon=ft.Icons.CODE,
+                    url=pkg.repository_url,
+                    style=ft.ButtonStyle(color=ft.Colors.PRIMARY),
+                )
+            )
+        if not doc_controls:
+            doc_controls.append(
+                ft.Text("No documentation links available", color=ft.Colors.ON_SURFACE_VARIANT)
+            )
+        tab_content = ft.Column(controls=doc_controls, spacing=12)
+    else:
+        readme_text = _clean_readme(pkg.readme) if pkg.readme else "No README available"
+        tab_content = ft.Markdown(
+            value=readme_text,
             selectable=True,
             extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
             on_tap_link=lambda e: None,
-        ),
-        padding=20,
+            shrink_wrap=True,
+            fit_content=True,
+        )
+
+    # --- Sidebar content ---
+    sidebar_content = ft.Column(
+        controls=[
+            ft.Row(
+                controls=[
+                    ft.Text(
+                        "Package Info",
+                        size=16,
+                        weight=ft.FontWeight.BOLD,
+                        color=ft.Colors.ON_SURFACE,
+                    ),
+                    ft.IconButton(
+                        icon=ft.Icons.CLOSE,
+                        icon_size=18,
+                        icon_color=ft.Colors.ON_SURFACE_VARIANT,
+                        on_click=lambda _: set_sidebar_open(False),
+                    ),
+                ],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            ),
+            ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
+            _sidebar_section(
+                "Statistics",
+                [
+                    _stat_row(ft.Icons.STAR, "Stars", format_number(pkg.stars)),
+                    _stat_row(ft.Icons.FORK_RIGHT, "Forks", format_number(pkg.forks)),
+                    _stat_row(ft.Icons.DOWNLOAD, "Downloads", format_number(pkg.downloads)),
+                ],
+            ),
+            ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
+            _sidebar_section(
+                "Repository",
+                [
+                    ft.TextButton(
+                        "GitHub",
+                        icon=ft.Icons.CODE,
+                        url=pkg.repository_url,
+                        style=ft.ButtonStyle(color=ft.Colors.PRIMARY),
+                    )
+                    if pkg.repository_url
+                    else ft.Container(),
+                    ft.TextButton(
+                        "Issues",
+                        icon=ft.Icons.BUG_REPORT,
+                        url=pkg.issues_url,
+                        style=ft.ButtonStyle(color=ft.Colors.PRIMARY),
+                    )
+                    if pkg.issues_url
+                    else ft.Container(),
+                ],
+            ),
+            ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
+            _sidebar_section(
+                "Topics",
+                [
+                    ft.Row(
+                        controls=[
+                            ft.Container(
+                                content=ft.Text(f"#{t}", size=12, color=ft.Colors.PRIMARY),
+                                bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
+                                border_radius=12,
+                                padding=ft.Padding(left=8, top=3, right=8, bottom=3),
+                            )
+                            for t in pkg.topics
+                        ],
+                        wrap=True,
+                        spacing=4,
+                    )
+                ]
+                if pkg.topics
+                else [ft.Text("No topics", size=12, color=ft.Colors.ON_SURFACE_VARIANT)],
+            ),
+            ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
+            _sidebar_section(
+                "License",
+                [
+                    ft.Text(pkg.license or "Unknown", size=14, color=ft.Colors.ON_SURFACE_VARIANT),
+                ],
+            ),
+            ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
+            _sidebar_section(
+                "Dependencies",
+                [
+                    ft.Text(d, size=12, color=ft.Colors.ON_SURFACE_VARIANT)
+                    for d in (pkg.dependencies or [])[:20]
+                ]
+                or [ft.Text("No dependencies", size=12, color=ft.Colors.ON_SURFACE_VARIANT)],
+            ),
+        ],
+        spacing=8,
+        scroll=ft.ScrollMode.AUTO,
     )
-    changelog_view = ft.Container(
-        content=ft.Markdown(
-            value=pkg.changelog or "No changelog available",
-            selectable=True,
-            extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+
+    # --- Slide-in sidebar panel ---
+    sidebar_panel = ft.Container(
+        content=sidebar_content,
+        width=300,
+        bgcolor=ft.Colors.SURFACE_CONTAINER,
+        padding=16,
+        border_radius=ft.BorderRadius(top_left=12, bottom_left=12, top_right=0, bottom_right=0),
+        shadow=ft.BoxShadow(
+            spread_radius=1,
+            blur_radius=10,
+            color=ft.Colors.with_opacity(0.3, ft.Colors.BLACK),
+            offset=ft.Offset(-2, 0),
         ),
-        padding=20,
+        right=0,
+        top=0,
+        bottom=0,
+        offset=ft.Offset(0, 0) if sidebar_open else ft.Offset(1, 0),
+        animate_offset=ft.Animation(300, ft.AnimationCurve.EASE_IN_OUT),
     )
 
-    doc_controls: list[ft.Control] = []
-    if pkg.documentation_url:
-        doc_controls.append(
-            ft.TextButton(
-                "Documentation",
-                icon=ft.Icons.BOOK,
-                url=pkg.documentation_url,
-                style=ft.ButtonStyle(color=ft.Colors.PRIMARY),
-            )
-        )
-    if pkg.repository_url:
-        doc_controls.append(
-            ft.TextButton(
-                "GitHub Repository",
-                icon=ft.Icons.CODE,
-                url=pkg.repository_url,
-                style=ft.ButtonStyle(color=ft.Colors.PRIMARY),
-            )
-        )
-    if not doc_controls:
-        doc_controls.append(
-            ft.Text("No documentation links available", color=ft.Colors.ON_SURFACE_VARIANT)
-        )
-    docs_view = ft.Container(content=ft.Column(controls=doc_controls, spacing=12), padding=20)
-
-    topic_chips = [
-        ft.Container(
-            content=ft.Text(f"#{t}", size=12, color=ft.Colors.PRIMARY),
-            bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
-            border_radius=12,
-            padding=ft.Padding(left=8, top=3, right=8, bottom=3),
-        )
-        for t in pkg.topics
-    ]
-
-    dep_controls = [
-        ft.Text(d, size=12, color=ft.Colors.ON_SURFACE_VARIANT)
-        for d in (pkg.dependencies or [])[:20]
-    ]
-
-    sidebar = ft.Container(
+    # --- Toggle tab (vertical strip on right edge) ---
+    toggle_tab = ft.Container(
         content=ft.Column(
             controls=[
-                _sidebar_section(
-                    "Statistics",
-                    [
-                        _stat_row(ft.Icons.STAR, "Stars", format_number(pkg.stars)),
-                        _stat_row(ft.Icons.FORK_RIGHT, "Forks", format_number(pkg.forks)),
-                        _stat_row(ft.Icons.DOWNLOAD, "Downloads", format_number(pkg.downloads)),
-                    ],
+                ft.Icon(
+                    ft.Icons.CHEVRON_LEFT if sidebar_open else ft.Icons.CHEVRON_RIGHT,
+                    size=18,
+                    color=ft.Colors.ON_PRIMARY,
                 ),
-                ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
-                _sidebar_section(
-                    "Repository",
-                    [
-                        ft.TextButton(
-                            "GitHub",
-                            icon=ft.Icons.CODE,
-                            url=pkg.repository_url,
-                            style=ft.ButtonStyle(color=ft.Colors.PRIMARY),
-                        )
-                        if pkg.repository_url
-                        else ft.Container(),
-                        ft.TextButton(
-                            "Issues",
-                            icon=ft.Icons.BUG_REPORT,
-                            url=pkg.issues_url,
-                            style=ft.ButtonStyle(color=ft.Colors.PRIMARY),
-                        )
-                        if pkg.issues_url
-                        else ft.Container(),
-                    ],
-                ),
-                ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
-                _sidebar_section(
-                    "Topics",
-                    [ft.Row(controls=topic_chips, wrap=True, spacing=4)]
-                    if topic_chips
-                    else [ft.Text("No topics", size=12, color=ft.Colors.ON_SURFACE_VARIANT)],
-                ),
-                ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
-                _sidebar_section(
-                    "License",
-                    [
-                        ft.Text(
-                            pkg.license or "Unknown", size=14, color=ft.Colors.ON_SURFACE_VARIANT
-                        )
-                    ],
-                ),
-                ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
-                _sidebar_section(
-                    "Dependencies",
-                    dep_controls
-                    if dep_controls
-                    else [ft.Text("No dependencies", size=12, color=ft.Colors.ON_SURFACE_VARIANT)],
+                ft.RotatedBox(
+                    content=ft.Text(
+                        "Info",
+                        size=14,
+                        color=ft.Colors.ON_PRIMARY,
+                        weight=ft.FontWeight.W_500,
+                    ),
+                    quarter_turns=1,
                 ),
             ],
-            spacing=8,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=2,
         ),
-        width=280,
-        padding=16,
-        bgcolor=ft.Colors.SURFACE_CONTAINER,
-        border_radius=8,
+        width=28,
+        height=80,
+        bgcolor=FLET_PINK,
+        border_radius=ft.BorderRadius(top_left=8, bottom_left=8, top_right=0, bottom_right=0),
+        alignment=ft.Alignment.CENTER,
+        on_click=lambda _: set_sidebar_open(not sidebar_open),
+        ink=True,
     )
+
+    # Wrap toggle in a column to center it vertically
+    toggle_wrapper = ft.Container(
+        content=ft.Column(
+            controls=[toggle_tab],
+            alignment=ft.MainAxisAlignment.CENTER,
+        ),
+        right=300 if sidebar_open else 0,
+        top=0,
+        bottom=0,
+        animate_position=ft.Animation(300, ft.AnimationCurve.EASE_IN_OUT),
+    )
+
+    # --- Tab buttons ---
+    def make_tab(label: str, index: int) -> ft.Control:
+        is_active = index == active_tab
+        return ft.Container(
+            content=ft.Text(
+                label,
+                size=14,
+                color=ft.Colors.PRIMARY if is_active else ft.Colors.ON_SURFACE_VARIANT,
+                weight=ft.FontWeight.W_600 if is_active else ft.FontWeight.NORMAL,
+            ),
+            padding=ft.Padding(left=16, top=10, right=16, bottom=10),
+            border=ft.Border(
+                bottom=ft.BorderSide(2, ft.Colors.PRIMARY) if is_active else ft.BorderSide(0),
+            ),
+            on_click=lambda _, idx=index: set_active_tab(idx),
+            ink=True,
+        )
 
     return ft.Column(
         controls=[
+            # FIXED: Header
             ft.Container(
                 content=ft.Column(
                     controls=[
@@ -215,47 +315,57 @@ def PackageDetailPage(
                     ],
                     spacing=4,
                 ),
-                padding=ft.Padding(left=20, top=16, right=20, bottom=16),
+                padding=ft.Padding(left=20, top=16, right=20, bottom=8),
             ),
-            ft.Row(
-                controls=[
-                    ft.Container(
-                        content=ft.Tabs(
-                            length=3,
-                            selected_index=active_tab,
-                            on_change=lambda e: set_active_tab(int(e.data)),
-                            content=ft.Column(
-                                controls=[
-                                    ft.TabBar(
-                                        tabs=[
-                                            ft.Tab(label="Readme"),
-                                            ft.Tab(label="Changelog"),
-                                            ft.Tab(label="Documentation"),
-                                        ],
-                                        indicator_color=ft.Colors.PRIMARY,
-                                        label_color=ft.Colors.PRIMARY,
-                                        unselected_label_color=ft.Colors.ON_SURFACE_VARIANT,
-                                    ),
-                                    ft.TabBarView(
-                                        controls=[readme_view, changelog_view, docs_view],
-                                        expand=True,
-                                    ),
-                                ],
-                                expand=True,
-                            ),
+            # FIXED: Tab buttons
+            ft.Container(
+                content=ft.Row(
+                    controls=[
+                        make_tab("Readme", 0),
+                        make_tab("Changelog", 1),
+                        make_tab("Documentation", 2),
+                    ],
+                    spacing=0,
+                ),
+                padding=ft.Padding(left=20, top=0, right=20, bottom=0),
+            ),
+            ft.Divider(color=ft.Colors.OUTLINE_VARIANT, height=1),
+            # SCROLLABLE: Content with overlay sidebar
+            ft.Container(
+                content=ft.Stack(
+                    controls=[
+                        # Main content (scrollable)
+                        ft.ListView(
+                            controls=[
+                                ft.Container(content=tab_content, padding=20),
+                            ],
                         ),
-                        expand=True,
-                    ),
-                    sidebar,
-                ],
-                vertical_alignment=ft.CrossAxisAlignment.START,
-                spacing=20,
+                        # Slide-in sidebar panel
+                        sidebar_panel,
+                        # Toggle tab on right edge
+                        toggle_wrapper,
+                    ],
+                ),
+                expand=True,
             ),
+            # Footer always at bottom
             AppFooter(),
         ],
-        scroll=ft.ScrollMode.AUTO,
+        spacing=0,
         expand=True,
     )
+
+
+def _clean_readme(text: str) -> str:
+    """Clean README for safe Markdown rendering."""
+    import re
+
+    text = re.sub(r">\s*\[!(NOTE|WARNING|TIP|IMPORTANT|CAUTION)\]", "> **\\1:**", text)
+    text = re.sub(r"\[!\[[^\]]*\]\([^)]*\)\]\([^)]*\)", "", text)
+    text = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", text)
+    text = re.sub(r"<[^>]+>", "", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
 
 
 def _sidebar_section(title: str, controls: list[ft.Control]) -> ft.Control:

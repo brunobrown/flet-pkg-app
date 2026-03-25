@@ -77,8 +77,4 @@ def SidebarFilters(
                 ),
             ],
         ),
-        width=220,
-        padding=20,
-        bgcolor=ft.Colors.SURFACE_CONTAINER,
-        border_radius=8,
     )

@@ -16,7 +16,7 @@ class PackagesState:
     # Search/list
     packages: list[Package] = field(default_factory=list)
     total_count: int = 0
-    current_page: int = 1
+    page_number: int = 1
     search_query: str = ""
     sort_by: str = "default ranking"
     filter_type: str | None = None
@@ -72,9 +72,12 @@ class AppState:
     user: UserState = field(default_factory=UserState)
     theme: ThemeState = field(default_factory=ThemeState)
 
-    # Current route — changing this triggers UI re-render
-    current_route: str = "/"
+    # Navigation — simple page identifier
+    current_page: str = "home"
     detail_package_name: str = ""
 
-    # Theme — direct field on AppState so changes trigger AppRoot re-render
+    # Theme — direct field so changes trigger re-render
     is_dark: bool = True
+
+    # Filter — show only packages published on PyPI (default True)
+    show_pypi_only: bool = True

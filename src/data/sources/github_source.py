@@ -3,7 +3,7 @@ from typing import Any
 
 import httpx
 
-from src.core.constants import GITHUB_API_BASE
+from config import settings
 from src.core.exceptions import ApiError
 from src.core.logger import get_logger
 
@@ -18,7 +18,7 @@ class GitHubSource:
         if token:
             headers["Authorization"] = f"token {token}"
         self._client = httpx.AsyncClient(
-            base_url=GITHUB_API_BASE,
+            base_url=settings.GITHUB_API_BASE,
             headers=headers,
             timeout=30.0,
             limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),

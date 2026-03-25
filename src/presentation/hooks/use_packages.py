@@ -8,12 +8,12 @@ from src.presentation.state_management.global_state import PackagesState, UserSt
 from src.services.api_service import ApiService
 
 
-async def load_home_data(state: PackagesState, api: ApiService) -> None:
+async def load_home_data(state: PackagesState, api: ApiService, pypi_only: bool = True) -> None:
     state.home_loading = True
     state.error = ""
     try:
         use_case = GetHomeDataUseCase(api.repository)
-        state.home_data = await use_case.execute()
+        state.home_data = await use_case.execute(pypi_only=pypi_only)
     except Exception as e:
         state.error = str(e)
     finally:
@@ -29,7 +29,7 @@ async def search_packages(
     state.is_loading = True
     state.error = ""
     state.search_query = query
-    state.current_page = page_num
+    state.page_number = page_num
     try:
         use_case = SearchPackagesUseCase(api.repository)
         packages, total = await use_case.execute(

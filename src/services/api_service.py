@@ -1,4 +1,4 @@
-from src.core.config import AppConfig
+from config import settings
 from src.data.repositories.package_repository_impl import PackageRepositoryImpl
 from src.data.sources.clickhouse_source import ClickHouseSource
 from src.data.sources.github_source import GitHubSource
@@ -10,12 +10,11 @@ from src.services.cache_service import CacheService
 class ApiService:
     """Factory that creates and wires up all data layer dependencies."""
 
-    def __init__(self, config: AppConfig | None = None):
-        self._config = config or AppConfig.from_env()
-        self._github_source = GitHubSource(token=self._config.github_token)
+    def __init__(self):
+        self._github_source = GitHubSource(token=settings.GITHUB_TOKEN)
         self._pypi_source = PyPISource()
         self._clickhouse_source = ClickHouseSource()
-        self._cache = CacheService(ttl=self._config.cache_ttl)
+        self._cache = CacheService(ttl=settings.CACHE_TTL_SECONDS)
         self._repository = PackageRepositoryImpl(
             github_source=self._github_source,
             pypi_source=self._pypi_source,

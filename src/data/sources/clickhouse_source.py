@@ -4,7 +4,7 @@ from typing import Any
 
 import httpx
 
-from src.core.constants import CLICKHOUSE_PASSWORD, CLICKHOUSE_URL, CLICKHOUSE_USER
+from config import settings
 from src.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -21,11 +21,11 @@ class ClickHouseSource:
         """Execute a SQL query against the ClickHouse public PyPI dataset."""
         try:
             response = await self._client.get(
-                CLICKHOUSE_URL,
+                settings.CLICKHOUSE_URL,
                 params={
                     "query": sql,
-                    "user": CLICKHOUSE_USER,
-                    "password": CLICKHOUSE_PASSWORD,
+                    "user": settings.CLICKHOUSE_USER,
+                    "password": settings.CLICKHOUSE_PASSWORD,
                     "default_format": "JSON",
                 },
             )

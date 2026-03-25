@@ -1,14 +1,14 @@
 import time
 from typing import Any
 
-from src.core.constants import CACHE_TTL_SECONDS
+from config import settings
 from src.core.logger import get_logger
 
 logger = get_logger(__name__)
 
 
 class CacheService:
-    def __init__(self, ttl: int = CACHE_TTL_SECONDS):
+    def __init__(self, ttl: int = settings.CACHE_TTL_SECONDS):
         self._default_ttl = ttl
         self._store: dict[str, tuple[Any, float, int]] = {}
 

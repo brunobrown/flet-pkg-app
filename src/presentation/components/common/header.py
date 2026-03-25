@@ -13,8 +13,10 @@ def AppHeader(
     on_open_drawer: object = None,
     on_navigate_home: object = None,
     on_search: object = None,
+    on_toggle_pypi_filter: object = None,
     is_dark: bool = True,
     show_logo: bool = True,
+    show_pypi_only: bool = True,
     search_query: str = "",
 ) -> ft.Control:
     query, set_query = ft.use_state(search_query)
@@ -65,7 +67,12 @@ def AppHeader(
             # Detail: logo | spacer | help + theme
             desktop_items.append(ft.Container(expand=True))
 
-        desktop_items.extend([_help_menu(), _theme_button(theme_icon, on_theme_toggle)])
+        desktop_items.extend(
+            [
+                _help_menu(on_toggle_pypi_filter, show_pypi_only),
+                _theme_button(theme_icon, on_theme_toggle),
+            ]
+        )
         desktop_row = ft.Row(
             controls=desktop_items,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -75,7 +82,7 @@ def AppHeader(
         desktop_row = ft.Row(
             controls=[
                 ft.Container(expand=True),
-                _help_menu(),
+                _help_menu(on_toggle_pypi_filter, show_pypi_only),
                 _theme_button(theme_icon, on_theme_toggle),
             ],
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -137,7 +144,7 @@ def AppHeader(
     )
 
 
-def _help_menu() -> ft.Control:
+def _help_menu(on_toggle_pypi_filter: object = None, show_pypi_only: bool = True) -> ft.Control:
     return ft.PopupMenuButton(
         content=ft.Row(
             controls=[
@@ -150,11 +157,28 @@ def _help_menu() -> ft.Control:
             ft.PopupMenuItem(content="Introduction"),
             ft.PopupMenuItem(content="API Reference"),
             ft.PopupMenuItem(content="About Flet PKG"),
+            ft.PopupMenuItem(),  # divider
+            ft.PopupMenuItem(
+                content=ft.Row(
+                    controls=[
+                        ft.Icon(
+                            ft.Icons.CHECK_BOX
+                            if not show_pypi_only
+                            else ft.Icons.CHECK_BOX_OUTLINE_BLANK,
+                            size=18,
+                            color=ft.Colors.PRIMARY,
+                        ),
+                        ft.Text("Show GitHub-only packages", size=13),
+                    ],
+                    spacing=8,
+                ),
+                on_click=lambda _: on_toggle_pypi_filter() if on_toggle_pypi_filter else None,
+            ),
         ],
     )
 
 
-def _theme_button(icon: ft.Icons, on_toggle: object) -> ft.Control:
+def _theme_button(icon: ft.IconDataOrControl, on_toggle: object) -> ft.Control:
     return ft.IconButton(
         icon=icon,
         icon_color=ft.Colors.PRIMARY,

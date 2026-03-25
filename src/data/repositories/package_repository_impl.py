@@ -1,6 +1,6 @@
 import asyncio
 
-from src.core.constants import CACHE_TTL_DOWNLOADS, EXCLUDED_PACKAGES
+from config import settings
 from src.core.logger import get_logger
 from src.data.models.mappers import github_repo_to_package, pypi_info_to_package
 from src.data.sources.clickhouse_source import ClickHouseSource
@@ -16,7 +16,7 @@ logger = get_logger(__name__)
 
 def _is_excluded(pkg: Package) -> bool:
     name = pkg.pypi_name.lower() if pkg.pypi_name else pkg.name.lower()
-    return name in EXCLUDED_PACKAGES
+    return name in settings.EXCLUDED_PACKAGES
 
 
 def _filter_excluded(packages: list[Package]) -> list[Package]:
@@ -57,7 +57,7 @@ class PackageRepositoryImpl(PackageRepository):
             for name in uncached:
                 downloads = ch_data.get(name, 0)
                 result[name] = downloads
-                self._cache.set(f"dl:{name}", downloads, ttl=CACHE_TTL_DOWNLOADS)
+                self._cache.set(f"dl:{name}", downloads, ttl=settings.CACHE_TTL_DOWNLOADS)
             return result
         except Exception:
             logger.info("ClickHouse unavailable, falling back to pypistats")
@@ -65,7 +65,7 @@ class PackageRepositoryImpl(PackageRepository):
         for name in uncached:
             downloads = await self._pypi.get_recent_downloads(name)
             result[name] = downloads
-            self._cache.set(f"dl:{name}", downloads, ttl=CACHE_TTL_DOWNLOADS)
+            self._cache.set(f"dl:{name}", downloads, ttl=settings.CACHE_TTL_DOWNLOADS)
 
         return result
 
@@ -117,8 +117,11 @@ class PackageRepositoryImpl(PackageRepository):
         sort: str = "default ranking",
         package_type: str | None = None,
         official_only: bool = False,
+        pypi_only: bool = True,
     ) -> tuple[list[Package], int]:
-        cache_key = f"search:{query}:{page}:{per_page}:{sort}:{package_type}:{official_only}"
+        cache_key = (
+            f"search:{query}:{page}:{per_page}:{sort}:{package_type}:{official_only}:{pypi_only}"
+        )
         cached = self._cache.get(cache_key)
         if cached is not None:
             return cached
@@ -156,7 +159,7 @@ class PackageRepositoryImpl(PackageRepository):
                 packages = [p for p in packages if p.package_type == PackageType.UI_CONTROL]
 
             # Only real Flet-related packages
-            packages = await self._discovery.filter_flet_related(packages)
+            packages = await self._discovery.filter_flet_related(packages, pypi_only=pypi_only)
             packages = packages[:per_page]
             await self._enrich_with_pypi(packages)
 
@@ -209,17 +212,53 @@ class PackageRepositoryImpl(PackageRepository):
         if cached is not None:
             return cached
 
-        pypi_data = await self._pypi.get_package_info(package_name)
-        pkg = pypi_info_to_package(pypi_data)
-        info = pypi_data.get("info", {})
-        pkg.package_type = classify_by_summary(info.get("summary", ""), package_name)
-        pkg.downloads = await self._get_downloads(package_name)
+        # Try PyPI first
+        pkg: Package | None = None
+        try:
+            pypi_data = await self._pypi.get_package_info(package_name)
+            pkg = pypi_info_to_package(pypi_data)
+            info = pypi_data.get("info", {})
+            pkg.package_type = classify_by_summary(info.get("summary", ""), package_name)
+            pkg.downloads = await self._get_downloads(package_name)
+        except Exception:
+            logger.info("Package %s not on PyPI, trying GitHub", package_name)
+
+        # Fallback: search GitHub for the package
+        if pkg is None:
+            pkg = await self._fetch_github_only_package(package_name)
+            if pkg is None:
+                raise Exception(f"Package '{package_name}' not found on PyPI or GitHub")
 
         # Check if official (monorepo) package
         official_names = await self._discovery.get_official_extension_names()
         is_official = package_name in official_names
 
-        if pkg.github_owner and pkg.github_repo:
+        # Enrich with GitHub data
+        if is_official:
+            # Monorepo package — README from subpath, stars from main repo
+            pkg.github_owner = "flet-dev"
+            pkg.github_repo = "flet"
+            pkg.repository_url = (
+                f"https://github.com/flet-dev/flet/tree/main/sdk/python/packages/{package_name}"
+            )
+            pkg.issues_url = "https://github.com/flet-dev/flet/issues"
+            try:
+                readme, changelog = await asyncio.gather(
+                    self._github.get_file_content(
+                        "flet-dev", "flet", f"sdk/python/packages/{package_name}/README.md"
+                    ),
+                    self._github.get_file_content(
+                        "flet-dev", "flet", f"sdk/python/packages/{package_name}/CHANGELOG.md"
+                    ),
+                )
+                pkg.readme = readme
+                pkg.changelog = changelog
+                flet_stars = await self._get_flet_repo_stars()
+                pkg.stars = flet_stars
+            except Exception:
+                pass
+        elif pkg.github_owner and pkg.github_repo:
+            # Non-official package with GitHub repo
             try:
                 readme, changelog = await asyncio.gather(
                     self._github.get_readme(pkg.github_owner, pkg.github_repo),
@@ -238,23 +277,6 @@ class PackageRepositoryImpl(PackageRepository):
                     pkg.issues_url = f"https://github.com/{full_name}/issues"
             except Exception:
                 logger.info("No GitHub data for %s", package_name)
-        else:
-            # Monorepo package — get README from subpath
-            pkg.github_owner = "flet-dev"
-            pkg.github_repo = "flet"
-            pkg.repository_url = (
-                f"https://github.com/flet-dev/flet/tree/main/sdk/python/packages/{package_name}"
-            )
-            pkg.issues_url = "https://github.com/flet-dev/flet/issues"
-            try:
-                readme = await self._github.get_file_content(
-                    "flet-dev", "flet", f"sdk/python/packages/{package_name}/README.md"
-                )
-                pkg.readme = readme
-                flet_stars = await self._get_flet_repo_stars()
-                pkg.stars = flet_stars
-            except Exception:
-                pass
 
         if is_official:
             pkg.is_official = True
@@ -262,6 +284,30 @@ class PackageRepositoryImpl(PackageRepository):
 
         self._cache.set(cache_key, pkg)
         return pkg
+
+    async def _fetch_github_only_package(self, package_name: str) -> Package | None:
+        """Search GitHub for a package that doesn't exist on PyPI."""
+        try:
+            data = await self._github.search_repositories(
+                query=f"{package_name} language:python",
+                sort="stars",
+                per_page=5,
+            )
+            items = data.get("items", [])
+            # Find best match by name
+            for item in items:
+                if item.get("name", "").lower() == package_name.lower():
+                    pkg = github_repo_to_package(item)
+                    pkg.package_type = classify_by_summary(pkg.description, pkg.name)
+                    return pkg
+            # No exact match — take first result if name is close
+            if items:
+                pkg = github_repo_to_package(items[0])
+                pkg.package_type = classify_by_summary(pkg.description, pkg.name)
+                return pkg
+        except Exception:
+            logger.warning("GitHub search failed for %s", package_name)
+        return None
 
     async def get_official_packages(self) -> list[Package]:
         cache_key = "official_packages"
@@ -285,8 +331,8 @@ class PackageRepositoryImpl(PackageRepository):
             logger.error("Error fetching official packages: %s", e)
             return []
 
-    async def get_trending_packages(self, limit: int = 6) -> list[Package]:
-        cache_key = f"trending:{limit}"
+    async def get_trending_packages(self, limit: int = 6, pypi_only: bool = True) -> list[Package]:
+        cache_key = f"trending:{limit}:{pypi_only}"
         cached = self._cache.get(cache_key)
         if cached is not None:
             return cached
@@ -295,14 +341,14 @@ class PackageRepositoryImpl(PackageRepository):
             data = await self._github.search_repositories(
                 query="flet topic:flet language:python pushed:>2025-01-01",
                 sort="stars",
-                per_page=limit + 20,
+                per_page=limit + 30,
             )
             items = data.get("items", [])
             packages = [github_repo_to_package(item) for item in items]
             packages = _filter_excluded(packages)
 
             # Only real Flet packages (exist on PyPI + related to flet)
-            packages = await self._discovery.filter_flet_related(packages)
+            packages = await self._discovery.filter_flet_related(packages, pypi_only=pypi_only)
 
             for pkg in packages:
                 pkg.package_type = classify_by_summary(pkg.description, pkg.name)
@@ -315,7 +361,7 @@ class PackageRepositoryImpl(PackageRepository):
             logger.error("Error fetching trending packages: %s", e)
             return []
 
-    async def get_service_packages(self, limit: int = 6) -> list[Package]:
+    async def get_service_packages(self, limit: int = 6, pypi_only: bool = True) -> list[Package]:
         cache_key = f"services:{limit}"
         cached = self._cache.get(cache_key)
         if cached is not None:
@@ -324,7 +370,7 @@ class PackageRepositoryImpl(PackageRepository):
         try:
             packages = await self._discovery.fetch_official_packages()
             # Add community service packages from trending
-            community = await self._get_community_packages()
+            community = await self._get_community_packages(pypi_only=pypi_only)
             packages.extend(community)
 
             # Filter to services only
@@ -343,7 +389,9 @@ class PackageRepositoryImpl(PackageRepository):
             logger.error("Error fetching service packages: %s", e)
             return []
 
-    async def get_ui_control_packages(self, limit: int = 6) -> list[Package]:
+    async def get_ui_control_packages(
+        self, limit: int = 6, pypi_only: bool = True
+    ) -> list[Package]:
         cache_key = f"ui_controls:{limit}"
         cached = self._cache.get(cache_key)
         if cached is not None:
@@ -351,7 +399,7 @@ class PackageRepositoryImpl(PackageRepository):
 
         try:
             packages = await self._discovery.fetch_official_packages()
-            community = await self._get_community_packages()
+            community = await self._get_community_packages(pypi_only=pypi_only)
             packages.extend(community)
 
             # Filter to UI Controls only
@@ -370,24 +418,25 @@ class PackageRepositoryImpl(PackageRepository):
             logger.error("Error fetching UI control packages: %s", e)
             return []
 
-    async def get_python_packages(self, limit: int = 6) -> list[Package]:
-        cache_key = f"python_packages:{limit}"
+    async def get_python_packages(self, limit: int = 6, pypi_only: bool = True) -> list[Package]:
+        cache_key = f"python_packages:{limit}:{pypi_only}"
         cached = self._cache.get(cache_key)
         if cached is not None:
             return cached
 
         try:
+            # Fetch extra to compensate for filtering
             data = await self._github.search_repositories(
                 query="topic:flet language:python NOT flet-dev",
                 sort="stars",
-                per_page=limit + 20,
+                per_page=limit + 30,
             )
             items = data.get("items", [])
             packages = [github_repo_to_package(item) for item in items]
             packages = _filter_excluded(packages)
 
             # Only real Flet packages, exclude Services/UI Controls
-            packages = await self._discovery.filter_flet_related(packages)
+            packages = await self._discovery.filter_flet_related(packages, pypi_only=pypi_only)
             packages = [p for p in packages if p.package_type == PackageType.PYTHON_PACKAGE]
 
             for pkg in packages:
@@ -412,9 +461,9 @@ class PackageRepositoryImpl(PackageRepository):
 
     # --- Private helpers ---
 
-    async def _get_community_packages(self) -> list[Package]:
+    async def _get_community_packages(self, pypi_only: bool = True) -> list[Package]:
         """Discover community packages that depend on flet (not in monorepo)."""
-        cache_key = "community_flet_packages"
+        cache_key = f"community_flet_packages:{pypi_only}"
         cached = self._cache.get(cache_key)
         if cached is not None:
             return cached
@@ -428,7 +477,7 @@ class PackageRepositoryImpl(PackageRepository):
             items = data.get("items", [])
             packages = [github_repo_to_package(item) for item in items]
             packages = _filter_excluded(packages)
-            packages = await self._discovery.filter_flet_related(packages)
+            packages = await self._discovery.filter_flet_related(packages, pypi_only=pypi_only)
 
             for pkg in packages:
                 pkg.package_type = classify_by_summary(pkg.description, pkg.name)

@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Flet PKG - Package discovery platform for the Flet ecosystem"
 requires-python = ">=3.14"
 dependencies = [
+    "dynaconf>=3.2.13",
     "flet>=0.82.2",
     "httpx>=0.28.1",
 ]

@@ -5,12 +5,7 @@ from typing import Any
 
 import httpx
 
-from src.core.constants import (
-    MAX_RETRIES,
-    PYPI_API_BASE,
-    PYPISTATS_API_BASE,
-    PYPISTATS_MAX_CONCURRENT,
-)
+from config import settings
 from src.core.exceptions import ApiError
 from src.core.logger import get_logger
 
@@ -20,16 +15,16 @@ logger = get_logger(__name__)
 class PyPISource:
     def __init__(self):
         self._pypi_client = httpx.AsyncClient(
-            base_url=PYPI_API_BASE,
+            base_url=settings.PYPI_API_BASE,
             timeout=30.0,
             limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
         )
         self._stats_client = httpx.AsyncClient(
-            base_url=PYPISTATS_API_BASE,
+            base_url=settings.PYPISTATS_API_BASE,
             timeout=15.0,
             limits=httpx.Limits(max_connections=5, max_keepalive_connections=3),
         )
-        self._stats_semaphore = asyncio.Semaphore(PYPISTATS_MAX_CONCURRENT)
+        self._stats_semaphore = asyncio.Semaphore(settings.PYPISTATS_MAX_CONCURRENT)
 
     async def get_package_info(self, package_name: str) -> dict[str, Any]:
         try:
@@ -41,14 +36,14 @@ class PyPISource:
 
     async def get_recent_downloads(self, package_name: str) -> int:
         """Get recent downloads with semaphore + retry for 429."""
-        for attempt in range(MAX_RETRIES + 1):
+        for attempt in range(settings.MAX_RETRIES + 1):
             try:
                 async with self._stats_semaphore:
                     response = await self._stats_client.get(
                         f"/packages/{package_name}/recent",
                     )
                 if response.status_code == 429:
-                    if attempt < MAX_RETRIES:
+                    if attempt < settings.MAX_RETRIES:
                         wait = float(response.headers.get("Retry-After", 2**attempt))
                         logger.warning(
                             "429 from pypistats for %s, retry %d in %ss",

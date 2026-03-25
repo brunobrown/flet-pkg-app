@@ -58,7 +58,7 @@ def HeroSearchBar(on_search: object) -> ft.Control:
                 ),
                 ft.Container(height=12),
                 ft.Text(
-                    "The package discovery platform for Dart and Flet apps.",
+                    "The package discovery platform for Flet apps.",
                     size=14,
                     text_align=ft.TextAlign.CENTER,
                     color="#9eafc0",

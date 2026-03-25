@@ -1,3 +1,4 @@
+[default]
 GITHUB_API_BASE = "https://api.github.com"
 PYPI_API_BASE = "https://pypi.org"
 PYPISTATS_API_BASE = "https://pypistats.org/api"
@@ -6,15 +7,13 @@ FLET_ORG = "flet-dev"
 FLET_REPO = "flet"
 FLET_PACKAGES_PATH = "sdk/python/packages"
 
-CACHE_TTL_SECONDS = 300  # 5 minutes
-CACHE_TTL_DOWNLOADS = 86400  # 24h — download stats refresh once per day
+CACHE_TTL_SECONDS = 300
+CACHE_TTL_DOWNLOADS = 86400
 
-# ClickHouse public PyPI stats
 CLICKHOUSE_URL = "https://sql-clickhouse.clickhouse.com"
 CLICKHOUSE_USER = "demo"
 CLICKHOUSE_PASSWORD = ""
 
-# Rate limiting
 PYPISTATS_MAX_CONCURRENT = 3
 GITHUB_MAX_CONCURRENT = 10
 MAX_RETRIES = 3
@@ -32,17 +31,14 @@ SORT_OPTIONS = [
 
 PACKAGE_TYPES = ["UI Controls", "Services"]
 
-# Core framework packages — EXCLUDED from results (not extensions)
-EXCLUDED_PACKAGES = {
+EXCLUDED_PACKAGES = [
     "flet",
     "flet-cli",
     "flet-desktop",
     "flet-web",
     "flet-runtime",
-}
+]
 
-# Heuristic keywords to classify Service vs UI Control by summary text.
-# If none match, defaults to Python Package.
 SERVICE_KEYWORDS = [
     "service",
     "storage",
@@ -76,3 +72,11 @@ UI_CONTROL_KEYWORDS = [
     "code editor",
     "color picker",
 ]
+
+[development]
+
+[homologation]
+
+[production]
+
+[testing]
