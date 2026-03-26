@@ -70,7 +70,7 @@ def PackageCard(package: Package, on_click: object, on_copy: object) -> ft.Contr
                 ft.Text(
                     truncate(package.description, 200),
                     size=14,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    color=ft.Colors.ON_SURFACE,
                 ),
                 ft.Row(controls=tags, wrap=True, spacing=6) if tags else ft.Container(),
                 ft.Row(
@@ -120,7 +120,7 @@ def PackageCard(package: Package, on_click: object, on_copy: object) -> ft.Contr
             spacing=8,
         ),
         padding=20,
-        border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT)),
+        border_radius=8,
         bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
         on_click=handle_click,
         ink=True,
@@ -174,7 +174,7 @@ def PackageCardSmall(package: Package, on_click: object) -> ft.Control:
                 ft.Text(
                     truncate(package.description, 100),
                     size=12,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    color=ft.Colors.ON_SURFACE,
                     max_lines=3,
                     overflow=ft.TextOverflow.ELLIPSIS,
                 ),

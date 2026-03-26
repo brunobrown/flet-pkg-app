@@ -25,6 +25,7 @@ async def search_packages(
     api: ApiService,
     query: str = "",
     page_num: int = 1,
+    pypi_only: bool = True,
 ) -> None:
     state.is_loading = True
     state.error = ""
@@ -35,10 +36,11 @@ async def search_packages(
         packages, total = await use_case.execute(
             query=query,
             page=page_num,
-            per_page=10,
+            per_page=state.per_page,
             sort=state.sort_by,
             package_type=state.filter_type,
             official_only=state.filter_official,
+            pypi_only=pypi_only,
         )
         state.packages = packages
         state.total_count = total

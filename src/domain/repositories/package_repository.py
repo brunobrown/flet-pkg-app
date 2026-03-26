@@ -13,6 +13,7 @@ class PackageRepository(ABC):
         sort: str = "default ranking",
         package_type: str | None = None,
         official_only: bool = False,
+        pypi_only: bool = True,
     ) -> tuple[list[Package], int]:
         """Search packages. Returns (packages, total_count)."""
 

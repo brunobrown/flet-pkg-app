@@ -18,8 +18,6 @@ PYPISTATS_MAX_CONCURRENT = 3
 GITHUB_MAX_CONCURRENT = 10
 MAX_RETRIES = 3
 
-PACKAGES_PER_PAGE = 10
-
 SORT_OPTIONS = [
     "default ranking",
     "most stars",

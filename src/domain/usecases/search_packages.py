@@ -14,6 +14,7 @@ class SearchPackagesUseCase:
         sort: str = "default ranking",
         package_type: str | None = None,
         official_only: bool = False,
+        pypi_only: bool = True,
     ) -> tuple[list[Package], int]:
         return await self._repository.search_packages(
             query=query,
@@ -22,4 +23,5 @@ class SearchPackagesUseCase:
             sort=sort,
             package_type=package_type,
             official_only=official_only,
+            pypi_only=pypi_only,
         )

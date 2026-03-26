@@ -17,11 +17,11 @@ class PackagesState:
     packages: list[Package] = field(default_factory=list)
     total_count: int = 0
     page_number: int = 1
+    per_page: int = 10
     search_query: str = ""
     sort_by: str = "default ranking"
     filter_type: str | None = None
     filter_official: bool = False
-    filter_has_screenshot: bool = False
     is_loading: bool = False
     error: str = ""
 

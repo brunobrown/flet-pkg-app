@@ -29,42 +29,55 @@ def AppHeader(
 
     # --- Desktop header ---
     if show_logo:
-        desktop_items: list[ft.Control] = [
-            ft.Container(
-                content=ft.Image(
-                    src="/images/flet.svg", width=28, height=28, fit=ft.BoxFit.CONTAIN
-                ),
-                on_click=lambda _: on_navigate_home() if on_navigate_home else None,
-                ink=True,
-                padding=ft.Padding(left=4, top=4, right=8, bottom=4),
-            ),
-        ]
-        if on_search:
-            # Packages list: logo | search | help + theme
-            desktop_items.append(
-                ft.Container(
-                    content=ft.TextField(
-                        value=query,
-                        hint_text="Search packages",
-                        on_change=lambda e: set_query(e.data or ""),
-                        on_submit=handle_search_submit,
-                        border_radius=25,
-                        content_padding=ft.Padding(left=16, top=8, right=16, bottom=8),
-                        border_color=ft.Colors.OUTLINE_VARIANT,
-                        focused_border_color=ft.Colors.PRIMARY,
-                        cursor_color=ft.Colors.PRIMARY,
-                        text_size=14,
-                        prefix_icon=ft.Icons.SEARCH,
-                        height=42,
-                        bgcolor=ft.Colors.SURFACE_CONTAINER,
-                        hint_style=ft.TextStyle(color=ft.Colors.ON_SURFACE_VARIANT),
+        # Logo + app name
+        logo_group = ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Image(src="/images/flet.svg", width=28, height=28, fit=ft.BoxFit.CONTAIN),
+                    ft.Text(
+                        "Flet PKG",
+                        size=18,
+                        weight=ft.FontWeight.BOLD,
+                        color=ft.Colors.ON_SURFACE,
                     ),
-                    expand=True,
-                    padding=ft.Padding(left=8, top=0, right=8, bottom=0),
-                )
+                ],
+                spacing=8,
+            ),
+            on_click=lambda _: on_navigate_home() if on_navigate_home else None,
+            ink=True,
+            padding=ft.Padding(left=4, top=4, right=8, bottom=4),
+        )
+
+        desktop_items: list[ft.Control] = [logo_group]
+        if on_search:
+            # Packages list: logo+name | spacer | search (fixed width) | spacer | help + theme
+            desktop_items.extend(
+                [
+                    ft.Container(expand=True),
+                    ft.Container(
+                        content=ft.TextField(
+                            value=query,
+                            hint_text="Search packages",
+                            on_change=lambda e: set_query(e.data or ""),
+                            on_submit=handle_search_submit,
+                            border_radius=25,
+                            content_padding=ft.Padding(left=16, top=8, right=16, bottom=8),
+                            border_color=ft.Colors.OUTLINE_VARIANT,
+                            focused_border_color=ft.Colors.PRIMARY,
+                            cursor_color=ft.Colors.PRIMARY,
+                            text_size=14,
+                            prefix_icon=ft.Icons.SEARCH,
+                            height=42,
+                            bgcolor=ft.Colors.SURFACE_CONTAINER,
+                            hint_style=ft.TextStyle(color=ft.Colors.ON_SURFACE_VARIANT),
+                        ),
+                        width=650,
+                    ),
+                    ft.Container(expand=True),
+                ]
             )
         else:
-            # Detail: logo | spacer | help + theme
+            # Detail: logo+name | spacer | help + theme
             desktop_items.append(ft.Container(expand=True))
 
         desktop_items.extend(
@@ -126,14 +139,47 @@ def AppHeader(
         )
     mobile_controls.append(ft.Container(expand=True))
 
-    mobile_header = ft.Container(
-        content=ft.Row(
+    mobile_header_controls: list[ft.Control] = [
+        ft.Row(
             controls=[
                 *mobile_controls,
                 _theme_button(theme_icon, on_theme_toggle),
             ],
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
+    ]
+
+    # Search field on mobile (packages page only)
+    if on_search:
+        mobile_header_controls.append(
+            ft.Row(
+                controls=[
+                    ft.Container(
+                        content=ft.TextField(
+                            value=query,
+                            hint_text="Search packages",
+                            on_change=lambda e: set_query(e.data or ""),
+                            on_submit=handle_search_submit,
+                            border_radius=25,
+                            content_padding=ft.Padding(left=16, top=8, right=16, bottom=8),
+                            border_color=ft.Colors.OUTLINE_VARIANT,
+                            focused_border_color=ft.Colors.PRIMARY,
+                            cursor_color=ft.Colors.PRIMARY,
+                            text_size=14,
+                            prefix_icon=ft.Icons.SEARCH,
+                            height=42,
+                            bgcolor=ft.Colors.SURFACE_CONTAINER,
+                            hint_style=ft.TextStyle(color=ft.Colors.ON_SURFACE_VARIANT),
+                        ),
+                        expand=True,
+                    ),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+            )
+        )
+
+    mobile_header = ft.Container(
+        content=ft.Column(controls=mobile_header_controls, spacing=4),
         col={ft.ResponsiveRowBreakpoint.XS: 12, ft.ResponsiveRowBreakpoint.MD: 0},
     )
 

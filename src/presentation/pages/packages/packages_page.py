@@ -8,6 +8,7 @@ from src.presentation.components.common.loading import ErrorMessage, LoadingIndi
 from src.presentation.components.common.package_card import PackageCard
 from src.presentation.components.common.pagination import Pagination
 from src.presentation.components.sections.sidebar_filters import SidebarFilters
+from src.presentation.state_management.app_context import AppCtx
 from src.presentation.state_management.global_state import PackagesState
 from src.presentation.themes.colors import FLET_PINK
 from src.services.api_service import ApiService
@@ -20,11 +21,50 @@ def PackagesPage(
     on_package_click: object,
     on_copy: object,
 ) -> ft.Control:
-    filter_ui, set_filter_ui = ft.use_state(False)
-    filter_services, set_filter_services = ft.use_state(False)
-    filter_official, set_filter_official = ft.use_state(False)
-    filter_screenshot, set_filter_screenshot = ft.use_state(False)
+    ctx = ft.use_context(AppCtx)
     filters_open, set_filters_open = ft.use_state(False)
+
+    # Derive filter checkbox values from observable state (not use_state)
+    # so they survive re-renders triggered by @ft.observable changes.
+    filter_ui = state.filter_type == "UI Controls"
+    filter_services = state.filter_type == "Services"
+    filter_official = state.filter_official
+
+    # --- Handlers that update state and re-search ---
+    def handle_page_change(page_num: int) -> None:
+        state.page_number = page_num
+        ctx.reload_packages()
+
+    def handle_per_page_change(value: int) -> None:
+        state.per_page = value
+        state.page_number = 1
+        ctx.reload_packages()
+
+    def handle_sort_change(sort_value: str) -> None:
+        state.sort_by = sort_value
+        state.page_number = 1
+        ctx.reload_packages()
+
+    def handle_filter_ui(value: bool) -> None:
+        if value:
+            state.filter_type = "UI Controls"
+        elif state.filter_type == "UI Controls":
+            state.filter_type = None
+        state.page_number = 1
+        ctx.reload_packages()
+
+    def handle_filter_services(value: bool) -> None:
+        if value:
+            state.filter_type = "Services"
+        elif state.filter_type == "Services":
+            state.filter_type = None
+        state.page_number = 1
+        ctx.reload_packages()
+
+    def handle_filter_official(value: bool) -> None:
+        state.filter_official = value
+        state.page_number = 1
+        ctx.reload_packages()
 
     # Build package list from state
     package_list: list[ft.Control] = []
@@ -35,14 +75,21 @@ def PackagesPage(
     elif not state.packages:
         package_list.append(
             ft.Container(
-                content=ft.Text("No packages found", color=ft.Colors.ON_SURFACE_VARIANT, size=16),
+                content=ft.Text(
+                    "No flet packages were found", color=ft.Colors.ON_SURFACE_VARIANT, size=16
+                ),
                 padding=40,
                 alignment=ft.Alignment.CENTER,
             )
         )
     else:
         for pkg in state.packages:
-            package_list.append(PackageCard(pkg, on_click=on_package_click, on_copy=on_copy))
+            package_list.append(
+                ft.Container(
+                    content=PackageCard(pkg, on_click=on_package_click, on_copy=on_copy),
+                    margin=ft.Margin(left=0, top=0, right=0, bottom=10),
+                )
+            )
 
     sort_items = [ft.DropdownOption(text=s, key=s) for s in settings.SORT_OPTIONS]
 
@@ -68,11 +115,9 @@ def PackagesPage(
                 filter_ui=filter_ui,
                 filter_services=filter_services,
                 filter_official=filter_official,
-                filter_screenshot=filter_screenshot,
-                on_filter_ui=lambda v: set_filter_ui(v),
-                on_filter_services=lambda v: set_filter_services(v),
-                on_filter_official=lambda v: set_filter_official(v),
-                on_filter_screenshot=lambda v: set_filter_screenshot(v),
+                on_filter_ui=handle_filter_ui,
+                on_filter_services=handle_filter_services,
+                on_filter_official=handle_filter_official,
             ),
         ],
         spacing=8,
@@ -139,34 +184,38 @@ def PackagesPage(
     )
 
     # --- Results header ---
-    results_header = ft.Container(
+    def _results_info() -> ft.Row:
+        return ft.Row(
+            controls=[
+                ft.Text(
+                    "RESULTS",
+                    size=14,
+                    weight=ft.FontWeight.BOLD,
+                    color=ft.Colors.ON_SURFACE,
+                ),
+                ft.Container(
+                    content=ft.Text(str(state.total_count), size=12, color=ft.Colors.WHITE),
+                    bgcolor=ft.Colors.PRIMARY,
+                    border_radius=4,
+                    padding=ft.Padding(left=6, top=2, right=6, bottom=2),
+                ),
+                ft.Text("packages", size=14, color=ft.Colors.ON_SURFACE_VARIANT),
+            ],
+            spacing=8,
+        )
+
+    # Desktop results header: results info + sort dropdown
+    results_header_desktop = ft.Container(
         content=ft.Row(
             controls=[
+                _results_info(),
                 ft.Row(
                     controls=[
-                        ft.Text(
-                            "RESULTS",
-                            size=14,
-                            weight=ft.FontWeight.BOLD,
-                            color=ft.Colors.ON_SURFACE,
-                        ),
-                        ft.Container(
-                            content=ft.Text(str(state.total_count), size=12, color=ft.Colors.WHITE),
-                            bgcolor=ft.Colors.PRIMARY,
-                            border_radius=4,
-                            padding=ft.Padding(left=6, top=2, right=6, bottom=2),
-                        ),
-                        ft.Text("packages", size=14, color=ft.Colors.ON_SURFACE_VARIANT),
-                    ],
-                    spacing=8,
-                ),
-                ft.Row(
-                    controls=[
-                        ft.Text("SORT BY", size=12, color=ft.Colors.ON_SURFACE_VARIANT),
+                        # ft.Text("SORT BY", size=12, color=ft.Colors.ON_SURFACE_VARIANT),
                         ft.Dropdown(
                             value=state.sort_by,
                             options=sort_items,
-                            on_select=lambda e: None,
+                            on_select=lambda e: handle_sort_change(e.data),
                             width=180,
                             height=36,
                             text_size=12,
@@ -180,7 +229,44 @@ def PackagesPage(
             ],
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         ),
-        padding=ft.Padding(left=20, top=20, right=20, bottom=10),
+        padding=ft.Padding(left=20, top=20, right=20, bottom=20),
+        col={ft.ResponsiveRowBreakpoint.XS: 0, ft.ResponsiveRowBreakpoint.MD: 12},
+    )
+
+    # Mobile results header: results info + sort popup icon
+    results_header_mobile = ft.Container(
+        content=ft.Row(
+            controls=[
+                _results_info(),
+                ft.PopupMenuButton(
+                    content=ft.Container(
+                        content=ft.Icon(ft.Icons.SORT, size=22, color=ft.Colors.WHITE),
+                        width=40,
+                        height=40,
+                        border_radius=20,
+                        bgcolor=ft.Colors.PRIMARY,
+                        alignment=ft.Alignment.CENTER,
+                    ),
+                    items=[
+                        ft.PopupMenuItem(
+                            content=ft.Text(s, size=13),
+                            on_click=lambda _, _s=s: handle_sort_change(_s),
+                        )
+                        for s in settings.SORT_OPTIONS
+                    ],
+                ),
+            ],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+        padding=ft.Padding(left=20, top=16, right=20, bottom=8),
+        col={ft.ResponsiveRowBreakpoint.XS: 12, ft.ResponsiveRowBreakpoint.MD: 0},
+    )
+
+    results_header = ft.ResponsiveRow(
+        controls=[results_header_desktop, results_header_mobile],
+        spacing=0,
+        run_spacing=0,
     )
 
     return ft.Column(
@@ -207,8 +293,9 @@ def PackagesPage(
             Pagination(
                 current_page=state.page_number,
                 total_items=state.total_count,
-                per_page=settings.PACKAGES_PER_PAGE,
-                on_page_change=lambda p: None,
+                per_page=state.per_page,
+                on_page_change=handle_page_change,
+                on_per_page_change=handle_per_page_change,
             ),
             # Footer (fixed at bottom)
             AppFooter(),

@@ -22,25 +22,23 @@ from src.services.api_service import ApiService
 
 
 def _patch_session_dispatch(session) -> None:
-    """Skip events on orphaned controls (parent chain doesn't reach Page)."""
-    from flet.controls.page import Page
+    """Gracefully handle events on controls that were replaced during re-render.
 
+    In declarative mode (@ft.observable + @ft.component), re-renders recreate controls.
+    Events sent by the client for old control IDs may arrive after the control is orphaned.
+    Instead of pre-checking attachment (which races with re-renders and drops valid events),
+    we attempt dispatch and catch failures.
+    """
     original_dispatch = session.dispatch_event
-
-    def _is_attached(control) -> bool:
-        current = control
-        while current is not None:
-            if isinstance(current, Page):
-                return True
-            current = current.parent
-        return False
 
     async def safe_dispatch(control_id, event_name, event_data):
         control = session._Session__index.get(control_id)
-        if control and not _is_attached(control):
-            logging.debug("Skipping event on orphaned %s(%s)", type(control).__name__, control_id)
+        if control is None:
             return
-        await original_dispatch(control_id, event_name, event_data)
+        try:
+            await original_dispatch(control_id, event_name, event_data)
+        except Exception:
+            logging.debug("Ignored event on detached %s(%s)", type(control).__name__, control_id)
 
     session.dispatch_event = safe_dispatch
 
@@ -78,7 +76,7 @@ def main(page: ft.Page) -> None:
 
     async def _load_search(query: str) -> None:
         pkg_state.search_query = query
-        await search_packages(pkg_state, api, query, 1)
+        await search_packages(pkg_state, api, query, 1, pypi_only=app_state.show_pypi_only)
         app_state.current_page = "packages"
 
     # --- Navigation ---
@@ -97,12 +95,27 @@ def main(page: ft.Page) -> None:
 
     def handle_pypi_filter_toggle() -> None:
         app_state.show_pypi_only = not app_state.show_pypi_only
-        # Reload home data to apply the new filter
-        pkg_state.home_data = None
-        page.run_task(_load_home)
+        if app_state.current_page == "packages":
+            # Reload search results with new pypi_only filter
+            handle_reload_packages()
+        else:
+            # Reload home data to apply the new filter
+            pkg_state.home_data = None
+            page.run_task(_load_home)
 
     def handle_search(query: str = "") -> None:
         navigate(f"packages:{query}")
+
+    def handle_reload_packages() -> None:
+        """Re-run search with current state (sort, filters, per_page, page)."""
+        page.run_task(
+            search_packages,
+            pkg_state,
+            api,
+            pkg_state.search_query,
+            pkg_state.page_number,
+            app_state.show_pypi_only,
+        )
 
     def handle_copy(text: str) -> None:
         page.run_task(ft.Clipboard().set, text)
@@ -116,6 +129,7 @@ def main(page: ft.Page) -> None:
         toggle_theme=handle_theme_toggle,
         toggle_pypi_filter=handle_pypi_filter_toggle,
         search=handle_search,
+        reload_packages=handle_reload_packages,
         copy_to_clipboard=handle_copy,
     )
 

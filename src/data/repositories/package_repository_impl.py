@@ -109,19 +109,16 @@ class PackageRepositoryImpl(PackageRepository):
 
     # --- Public methods ---
 
-    async def search_packages(
+    async def _fetch_all_filtered(
         self,
         query: str,
-        page: int = 1,
-        per_page: int = 10,
-        sort: str = "default ranking",
-        package_type: str | None = None,
-        official_only: bool = False,
-        pypi_only: bool = True,
-    ) -> tuple[list[Package], int]:
-        cache_key = (
-            f"search:{query}:{page}:{per_page}:{sort}:{package_type}:{official_only}:{pypi_only}"
-        )
+        sort: str,
+        package_type: str | None,
+        official_only: bool,
+        pypi_only: bool,
+    ) -> list[Package]:
+        """Fetch, filter, and cache the full list of Flet packages for a query."""
+        cache_key = f"all_filtered:{query}:{sort}:{package_type}:{official_only}:{pypi_only}"
         cached = self._cache.get(cache_key)
         if cached is not None:
             return cached
@@ -136,39 +133,85 @@ class PackageRepositoryImpl(PackageRepository):
         if official_only:
             search_q += " user:flet-dev"
 
+        # Fetch multiple pages from GitHub to get enough results after filtering
+        all_packages: list[Package] = []
+        seen_names: set[str] = set()
+        max_pages = 5  # Up to 500 results from GitHub
+
+        for gh_page in range(1, max_pages + 1):
+            try:
+                data = await self._github.search_repositories(
+                    query=search_q,
+                    sort=gh_sort,
+                    page=gh_page,
+                    per_page=100,
+                )
+                items = data.get("items", [])
+                if not items:
+                    break
+
+                packages = [github_repo_to_package(item) for item in items]
+                packages = _filter_excluded(packages)
+
+                for pkg in packages:
+                    pkg.package_type = classify_by_summary(pkg.description, pkg.name)
+
+                packages = await self._discovery.filter_flet_related(packages, pypi_only=pypi_only)
+
+                for pkg in packages:
+                    key = pkg.pypi_name or pkg.name
+                    if key not in seen_names:
+                        seen_names.add(key)
+                        all_packages.append(pkg)
+
+                # Stop if GitHub returned fewer than requested
+                if len(items) < 100:
+                    break
+            except Exception as e:
+                logger.error("Search page %d error: %s", gh_page, e)
+                break
+
+        # Apply type filter
+        if package_type == "Services":
+            all_packages = [p for p in all_packages if p.package_type == PackageType.SERVICE]
+        elif package_type == "UI Controls":
+            all_packages = [p for p in all_packages if p.package_type == PackageType.UI_CONTROL]
+
+        # Enrich all with downloads for sorting
+        await self._enrich_with_pypi(all_packages)
+
+        # Sort
+        if sort == "most downloads":
+            all_packages.sort(key=lambda p: p.downloads, reverse=True)
+        elif sort == "most stars":
+            all_packages.sort(key=lambda p: p.stars, reverse=True)
+        elif sort == "trending":
+            all_packages.sort(key=lambda p: p.stars + p.downloads, reverse=True)
+
+        self._cache.set(cache_key, all_packages, ttl=3600)
+        return all_packages
+
+    async def search_packages(
+        self,
+        query: str,
+        page: int = 1,
+        per_page: int = 10,
+        sort: str = "default ranking",
+        package_type: str | None = None,
+        official_only: bool = False,
+        pypi_only: bool = True,
+    ) -> tuple[list[Package], int]:
         try:
-            data = await self._github.search_repositories(
-                query=search_q,
-                sort=gh_sort,
-                page=page,
-                per_page=per_page + 10,
+            all_packages = await self._fetch_all_filtered(
+                query, sort, package_type, official_only, pypi_only
             )
-            total = min(data.get("total_count", 0), 1000)
-            items = data.get("items", [])
 
-            packages = [github_repo_to_package(item) for item in items]
-            packages = _filter_excluded(packages)
+            total = len(all_packages)
+            start = (page - 1) * per_page
+            end = start + per_page
+            page_packages = all_packages[start:end]
 
-            # Classify each by summary
-            for pkg in packages:
-                pkg.package_type = classify_by_summary(pkg.description, pkg.name)
-
-            if package_type == "Services":
-                packages = [p for p in packages if p.package_type == PackageType.SERVICE]
-            elif package_type == "UI Controls":
-                packages = [p for p in packages if p.package_type == PackageType.UI_CONTROL]
-
-            # Only real Flet-related packages
-            packages = await self._discovery.filter_flet_related(packages, pypi_only=pypi_only)
-            packages = packages[:per_page]
-            await self._enrich_with_pypi(packages)
-
-            if sort == "most downloads":
-                packages.sort(key=lambda p: p.downloads, reverse=True)
-
-            result = (packages, total)
-            self._cache.set(cache_key, result)
-            return result
+            return page_packages, total
         except Exception as e:
             logger.error("Search error: %s", e)
             return [], 0

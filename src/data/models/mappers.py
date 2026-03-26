@@ -44,7 +44,6 @@ def github_repo_to_package(
         pypi_name=pypi_name or name,
         github_owner=owner,
         github_repo=name,
-        has_screenshot=bool(repo.get("homepage")),
     )
 
 

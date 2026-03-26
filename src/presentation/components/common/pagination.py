@@ -56,41 +56,40 @@ def Pagination(
         if on_page_change and 1 <= page_num <= total_pages:
             on_page_change(page_num)
 
-    # Page buttons
+    # Page buttons — always show, even for a single page
     buttons: list[ft.Control] = []
 
-    if total_pages > 1:
+    buttons.append(
+        _page_button(
+            "«",
+            is_current=False,
+            on_click=lambda _: go_to_page(current_page - 1),
+            disabled=current_page <= 1,
+        )
+    )
+
+    start = max(1, current_page - 2)
+    end = min(total_pages, start + 4)
+    if end - start < 4:
+        start = max(1, end - 4)
+
+    for p in range(start, end + 1):
         buttons.append(
             _page_button(
-                "«",
-                is_current=False,
-                on_click=lambda _: go_to_page(current_page - 1),
-                disabled=current_page <= 1,
+                str(p),
+                is_current=(p == current_page),
+                on_click=lambda _, pg=p: go_to_page(pg),
             )
         )
 
-        start = max(1, current_page - 2)
-        end = min(total_pages, start + 4)
-        if end - start < 4:
-            start = max(1, end - 4)
-
-        for p in range(start, end + 1):
-            buttons.append(
-                _page_button(
-                    str(p),
-                    is_current=(p == current_page),
-                    on_click=lambda _, pg=p: go_to_page(pg),
-                )
-            )
-
-        buttons.append(
-            _page_button(
-                "»",
-                is_current=False,
-                on_click=lambda _: go_to_page(current_page + 1),
-                disabled=current_page >= total_pages,
-            )
+    buttons.append(
+        _page_button(
+            "»",
+            is_current=False,
+            on_click=lambda _: go_to_page(current_page + 1),
+            disabled=current_page >= total_pages,
         )
+    )
 
     # Per-page selector
     per_page_options = [ft.DropdownOption(text=str(n), key=str(n)) for n in PAGE_SIZE_OPTIONS]

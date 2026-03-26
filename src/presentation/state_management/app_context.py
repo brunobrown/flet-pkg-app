@@ -19,6 +19,7 @@ class AppContextValue:
     toggle_theme: Callable[[], None]
     toggle_pypi_filter: Callable[[], None]
     search: Callable[[str], None]
+    reload_packages: Callable[[], None]
     copy_to_clipboard: Callable[[str], None]
 
 

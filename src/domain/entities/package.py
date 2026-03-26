@@ -31,7 +31,6 @@ class Package:
     homepage_url: str = ""
     issues_url: str = ""
     dependencies: list[str] = field(default_factory=list)
-    has_screenshot: bool = False
     pypi_name: str = ""
     github_owner: str = ""
     github_repo: str = ""
