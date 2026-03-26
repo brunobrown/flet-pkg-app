@@ -62,22 +62,21 @@ def main(page: ft.Page) -> None:
 
     # --- Data loaders ---
     async def _load_home() -> None:
+        app_state.current_page = "home"
         if pkg_state.home_data is None:
             await load_home_data(pkg_state, api, pypi_only=app_state.show_pypi_only)
-        app_state.current_page = "home"
 
     async def _load_detail(name: str) -> None:
         app_state.detail_package_name = name
         pkg_state.detail_package = None
         pkg_state.error = ""
-        await load_package_detail_by_name(pkg_state, api, name)
-        # Navigate to detail even on error (page shows error message)
         app_state.current_page = "detail"
+        await load_package_detail_by_name(pkg_state, api, name)
 
     async def _load_search(query: str) -> None:
         pkg_state.search_query = query
-        await search_packages(pkg_state, api, query, 1, pypi_only=app_state.show_pypi_only)
         app_state.current_page = "packages"
+        await search_packages(pkg_state, api, query, 1, pypi_only=app_state.show_pypi_only)
 
     # --- Navigation ---
     def navigate(target: str) -> None:

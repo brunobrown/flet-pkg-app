@@ -4,9 +4,10 @@ import flet as ft
 
 from config import settings
 from src.presentation.components.common.footer import AppFooter
-from src.presentation.components.common.loading import ErrorMessage, LoadingIndicator
+from src.presentation.components.common.loading import ErrorMessage
 from src.presentation.components.common.package_card import PackageCard
 from src.presentation.components.common.pagination import Pagination
+from src.presentation.components.common.skeleton_card import SkeletonCardList
 from src.presentation.components.sections.sidebar_filters import SidebarFilters
 from src.presentation.state_management.app_context import AppCtx
 from src.presentation.state_management.global_state import PackagesState
@@ -69,7 +70,7 @@ def PackagesPage(
     # Build package list from state
     package_list: list[ft.Control] = []
     if state.is_loading:
-        package_list.append(LoadingIndicator("Searching packages..."))
+        package_list.append(SkeletonCardList(count=state.per_page))
     elif state.error:
         package_list.append(ErrorMessage(state.error))
     elif not state.packages:
