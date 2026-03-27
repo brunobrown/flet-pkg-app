@@ -1,9 +1,11 @@
 """Application entry point — Composition Root.
 
 Uses page.render_views() with ft.create_context() for proper declarative navigation.
+URL routing: /, /packages, /packages?q=query, /packages/package-name
 """
 
 import logging
+import urllib.parse
 
 import flet as ft
 
@@ -43,6 +45,21 @@ def _patch_session_dispatch(session) -> None:
     session.dispatch_event = safe_dispatch
 
 
+def _parse_route(route: str) -> tuple[str, dict[str, str]]:
+    """Parse a URL route into (path, query_params).
+
+    Examples:
+        "/" -> ("", {})
+        "/packages" -> ("packages", {})
+        "/packages?q=audio" -> ("packages", {"q": "audio"})
+        "/packages/flet-audio" -> ("packages/flet-audio", {})
+    """
+    parsed = urllib.parse.urlparse(route)
+    path = parsed.path.strip("/")
+    params = dict(urllib.parse.parse_qsl(parsed.query))
+    return path, params
+
+
 def main(page: ft.Page) -> None:
     page.title = "Flet PKG - Package Discovery"
     page.theme = get_light_theme()
@@ -78,16 +95,49 @@ def main(page: ft.Page) -> None:
         app_state.current_page = "packages"
         await search_packages(pkg_state, api, query, 1, pypi_only=app_state.show_pypi_only)
 
-    # --- Navigation ---
-    def navigate(target: str) -> None:
-        if target == "home":
+    # --- Route handling ---
+    def _handle_route(route: str) -> None:
+        """Parse URL route and trigger the appropriate data load."""
+        path, params = _parse_route(route)
+
+        if path == "" or path == "/":
             page.run_task(_load_home)
+        elif path == "packages":
+            query = params.get("q", "")
+            page.run_task(_load_search, query)
+        elif path.startswith("packages/"):
+            name = path.split("/", 1)[1]
+            if name:
+                page.run_task(_load_detail, name)
+            else:
+                page.run_task(_load_search, "")
+        else:
+            page.run_task(_load_home)
+
+    # --- Navigation (updates URL + triggers route handler) ---
+    def _push(route: str) -> None:
+        """Push route to browser history (fires on_route_change)."""
+        page.run_task(page.push_route, route)
+
+    def navigate(target: str) -> None:
+        """Navigate by updating the browser URL.
+
+        target formats (internal):
+            "home" -> /
+            "packages:query" -> /packages?q=query
+            "detail:name" -> /packages/name
+        """
+        if target == "home":
+            _push("/")
         elif target.startswith("detail:"):
             name = target.split(":", 1)[1]
-            page.run_task(_load_detail, name)
+            _push(f"/packages/{name}")
         elif target.startswith("packages"):
             query = target.split(":", 1)[1] if ":" in target else ""
-            page.run_task(_load_search, query)
+            if query:
+                _push(f"/packages?q={urllib.parse.quote(query)}")
+            else:
+                _push("/packages")
 
     def handle_theme_toggle() -> None:
         toggle_theme_mode(page, app_state)
@@ -95,10 +145,8 @@ def main(page: ft.Page) -> None:
     def handle_pypi_filter_toggle() -> None:
         app_state.show_pypi_only = not app_state.show_pypi_only
         if app_state.current_page == "packages":
-            # Reload search results with new pypi_only filter
             handle_reload_packages()
         else:
-            # Reload home data to apply the new filter
             pkg_state.home_data = None
             page.run_task(_load_home)
 
@@ -120,6 +168,16 @@ def main(page: ft.Page) -> None:
         page.run_task(ft.Clipboard().set, text)
         page.show_dialog(ft.SnackBar(ft.Text(f"Copied: {text}")))
 
+    # --- URL event handlers ---
+    def on_route_change(e: ft.RouteChangeEvent) -> None:
+        _handle_route(e.route)
+
+    def on_view_pop(e: ft.ViewPopEvent) -> None:
+        _handle_route(page.route)
+
+    page.on_route_change = on_route_change
+    page.on_view_pop = on_view_pop
+
     # --- Context ---
     ctx_value = AppContextValue(
         state=app_state,
@@ -133,8 +191,10 @@ def main(page: ft.Page) -> None:
     )
 
     # --- Initial load + render ---
-    page.run_task(_load_home)
     page.render_views(App, ctx_value, app_state)
+
+    # Handle initial route (deep link or refresh)
+    _handle_route(page.route)
 
 
 if __name__ == "__main__":

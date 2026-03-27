@@ -17,7 +17,8 @@ def PageContent() -> ft.Control:
 
     def handle_package_click(pkg: object) -> None:
         if isinstance(pkg, Package):
-            ctx.navigate(f"detail:{pkg.pypi_name or pkg.name}")
+            name = pkg.pypi_name or pkg.name
+            ctx.navigate(f"detail:{name}")
 
     if state.current_page == "detail":
         return PackageDetailPage(
@@ -26,7 +27,6 @@ def PageContent() -> ft.Control:
             api=ctx.api,
             package_name=state.detail_package_name,
             on_copy=ctx.copy_to_clipboard,
-            on_back=lambda: ctx.navigate("home"),
         )
     elif state.current_page == "packages":
         return PackagesPage(

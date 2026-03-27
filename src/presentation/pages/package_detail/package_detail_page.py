@@ -17,7 +17,6 @@ def PackageDetailPage(
     api: ApiService,
     package_name: str,
     on_copy: object,
-    on_back: object,
 ) -> ft.Control:
     active_tab, set_active_tab = ft.use_state(0)
     sidebar_open, set_sidebar_open = ft.use_state(False)
@@ -261,26 +260,95 @@ def PackageDetailPage(
                     controls=[
                         ft.Row(
                             controls=[
-                                ft.IconButton(
-                                    icon=ft.Icons.ARROW_BACK,
-                                    icon_color=ft.Colors.ON_SURFACE,
-                                    on_click=lambda _: on_back() if on_back else None,
+                                ft.Row(
+                                    controls=[
+                                        ft.Text(
+                                            f"{pkg.name} {pkg.version}",
+                                            size=24,
+                                            weight=ft.FontWeight.BOLD,
+                                            color=ft.Colors.ON_SURFACE,
+                                        ),
+                                        ft.IconButton(
+                                            icon=ft.Icons.COPY,
+                                            icon_size=16,
+                                            icon_color=ft.Colors.ON_SURFACE_VARIANT,
+                                            tooltip=pkg.pip_install_command,
+                                            on_click=handle_copy,
+                                        ),
+                                    ],
+                                    spacing=4,
                                 ),
-                                ft.Text(
-                                    f"{pkg.name} {pkg.version}",
-                                    size=24,
-                                    weight=ft.FontWeight.BOLD,
-                                    color=ft.Colors.ON_SURFACE,
-                                ),
-                                ft.IconButton(
-                                    icon=ft.Icons.COPY,
-                                    icon_size=16,
-                                    icon_color=ft.Colors.ON_SURFACE_VARIANT,
-                                    tooltip=pkg.pip_install_command,
-                                    on_click=handle_copy,
+                                # LIKE button (pink, heart icon + count)
+                                ft.Container(
+                                    content=ft.Row(
+                                        controls=[
+                                            ft.Icon(
+                                                ft.Icons.FAVORITE_OUTLINE,
+                                                size=16,
+                                                color=ft.Colors.WHITE,
+                                            ),
+                                            ft.Text(
+                                                "LIKE",
+                                                size=12,
+                                                weight=ft.FontWeight.BOLD,
+                                                color=ft.Colors.WHITE,
+                                            ),
+                                            # Arrow + count badge
+                                            ft.Row(
+                                                controls=[
+                                                    # Arrow (rotated square)
+                                                    ft.Container(
+                                                        width=6,
+                                                        height=6,
+                                                        bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
+                                                        rotate=ft.Rotate(0.785),
+                                                        margin=ft.Margin(left=1, top=0, right=-4, bottom=4),
+                                                    ),
+                                                    # Count badge
+                                                    ft.Container(
+                                                        content=ft.Text(
+                                                            format_number(pkg.stars),
+                                                            size=12,
+                                                            weight=ft.FontWeight.BOLD,
+                                                            color=ft.Colors.ON_SURFACE,
+                                                            text_align=ft.TextAlign.CENTER,
+                                                        ),
+                                                        bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
+                                                        border_radius=ft.BorderRadius(
+                                                            top_left=0,
+                                                            bottom_left=0,
+                                                            top_right=16,
+                                                            bottom_right=16,
+                                                        ),
+                                                        alignment=ft.Alignment.CENTER,
+                                                        padding=ft.Padding(
+                                                            left=6,
+                                                            top=2,
+                                                            right=10,
+                                                            bottom=2,
+                                                        ),
+                                                    ),
+                                                ],
+                                                spacing=0,
+                                                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                                            ),
+                                        ],
+                                        spacing=4,
+                                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                                    ),
+                                    bgcolor=FLET_PINK,
+                                    border_radius=20,
+                                    padding=ft.Padding(left=8, top=2, right=2, bottom=2),
+                                    clip_behavior=ft.ClipBehavior.HARD_EDGE,
+                                    gradient=ft.LinearGradient(
+                                        begin=ft.Alignment.CENTER_LEFT,
+                                        end=ft.Alignment.CENTER_RIGHT,
+                                        colors=["#ee3167", "#5673b0", "#5abae7"],
+                                    ),
                                 ),
                             ],
-                            spacing=8,
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
                         ft.Row(
                             controls=[
@@ -294,21 +362,6 @@ def PackageDetailPage(
                                     size=13,
                                     color=ft.Colors.ON_SURFACE_VARIANT,
                                 ),
-                                ft.Row(
-                                    controls=[
-                                        ft.Icon(
-                                            ft.Icons.THUMB_UP_OUTLINED,
-                                            size=16,
-                                            color=ft.Colors.PRIMARY,
-                                        ),
-                                        ft.Text(
-                                            format_number(pkg.stars),
-                                            size=13,
-                                            color=ft.Colors.PRIMARY,
-                                        ),
-                                    ],
-                                    spacing=4,
-                                ),
                             ],
                             spacing=16,
                         ),
@@ -316,6 +369,7 @@ def PackageDetailPage(
                     spacing=4,
                 ),
                 padding=ft.Padding(left=20, top=16, right=20, bottom=8),
+                bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
             ),
             # FIXED: Tab buttons
             ft.Container(
@@ -337,7 +391,10 @@ def PackageDetailPage(
                         # Main content (scrollable)
                         ft.ListView(
                             controls=[
-                                ft.Container(content=tab_content, padding=20),
+                                ft.Container(
+                                    content=tab_content,
+                                    padding=ft.Padding(left=40, top=20, right=40, bottom=20),
+                                ),
                             ],
                         ),
                         # Slide-in sidebar panel

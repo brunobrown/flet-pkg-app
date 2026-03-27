@@ -185,7 +185,7 @@ def AppHeader(
 
     return ft.Container(
         content=ft.ResponsiveRow(controls=[desktop_header, mobile_header], spacing=0),
-        bgcolor=ft.Colors.SURFACE_CONTAINER_LOWEST,
+        bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
         padding=ft.Padding(left=12, top=6, right=12, bottom=6),
     )
 
