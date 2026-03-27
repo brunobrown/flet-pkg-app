@@ -41,5 +41,5 @@ def PageContent() -> ft.Control:
             api=ctx.api,
             on_search=ctx.search,
             on_package_click=handle_package_click,
-            on_view_all=lambda: ctx.search(""),
+            on_navigate=ctx.navigate,
         )

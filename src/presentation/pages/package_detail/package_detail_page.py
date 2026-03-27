@@ -4,6 +4,7 @@ import flet as ft
 
 from src.presentation.components.common.footer import AppFooter
 from src.presentation.components.common.loading import ErrorMessage, LoadingIndicator
+from src.presentation.state_management.app_context import AppCtx
 from src.presentation.state_management.global_state import PackagesState, UserState
 from src.presentation.themes.colors import FLET_PINK
 from src.services.api_service import ApiService
@@ -18,8 +19,21 @@ def PackageDetailPage(
     package_name: str,
     on_copy: object,
 ) -> ft.Control:
+    ctx = ft.use_context(AppCtx)
     active_tab, set_active_tab = ft.use_state(0)
     sidebar_open, set_sidebar_open = ft.use_state(False)
+    is_dark = ctx.state.is_dark
+
+    # Markdown styling adapted to theme mode
+    code_theme = ft.MarkdownCodeTheme.ATOM_ONE_DARK if is_dark else ft.MarkdownCodeTheme.GITHUB
+    md_style = ft.MarkdownStyleSheet(
+        blockquote_decoration=ft.BoxDecoration(
+            bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST if is_dark else "#E3F2FD",
+            border=ft.Border(left=ft.BorderSide(4, ft.Colors.PRIMARY)),
+            border_radius=4,
+        ),
+        blockquote_text_style=ft.TextStyle(color=ft.Colors.ON_SURFACE),
+    )
 
     if state.error:
         return ErrorMessage(state.error)
@@ -32,6 +46,13 @@ def PackageDetailPage(
         if on_copy:
             on_copy(pkg.pip_install_command)
 
+    def _handle_markdown_link(e: ft.ControlEvent) -> None:
+        url = e.data or ""
+        if url.startswith("#"):
+            return
+        if url.startswith(("http://", "https://")):
+            e.page.run_task(ft.UrlLauncher().launch_url, url)
+
     # --- Tab content ---
     if active_tab == 1:
         changelog_text = _clean_readme(pkg.changelog) if pkg.changelog else "No changelog available"
@@ -39,6 +60,9 @@ def PackageDetailPage(
             value=changelog_text,
             selectable=True,
             extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+            code_theme=code_theme,
+            md_style_sheet=md_style,
+            on_tap_link=_handle_markdown_link,
             shrink_wrap=True,
             fit_content=True,
         )
@@ -73,7 +97,9 @@ def PackageDetailPage(
             value=readme_text,
             selectable=True,
             extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
-            on_tap_link=lambda e: None,
+            code_theme=code_theme,
+            md_style_sheet=md_style,
+            on_tap_link=_handle_markdown_link,
             shrink_wrap=True,
             fit_content=True,
         )
@@ -302,7 +328,9 @@ def PackageDetailPage(
                                                         height=6,
                                                         bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
                                                         rotate=ft.Rotate(0.785),
-                                                        margin=ft.Margin(left=1, top=0, right=-4, bottom=4),
+                                                        margin=ft.Margin(
+                                                            left=1, top=0, right=-4, bottom=4
+                                                        ),
                                                     ),
                                                     # Count badge
                                                     ft.Container(
@@ -417,7 +445,7 @@ def _clean_readme(text: str) -> str:
     """Clean README for safe Markdown rendering."""
     import re
 
-    text = re.sub(r">\s*\[!(NOTE|WARNING|TIP|IMPORTANT|CAUTION)\]", "> **\\1:**", text)
+    text = re.sub(r">\s*\[!(NOTE|WARNING|TIP|IMPORTANT|CAUTION)]", "> **\\1:**", text)
     text = re.sub(r"\[!\[[^\]]*\]\([^)]*\)\]\([^)]*\)", "", text)
     text = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", text)
     text = re.sub(r"<[^>]+>", "", text)

@@ -14,9 +14,8 @@ def HomePage(
     api: ApiService,
     on_search: object,
     on_package_click: object,
-    on_view_all: object,
+    on_navigate: object,
 ) -> ft.Control:
-    # State-driven: data is loaded by navigate() / initial load in main.py
     if state.home_data is None:
         return ft.Column(
             controls=[
@@ -30,6 +29,9 @@ def HomePage(
     sections: list[ft.Control] = [HeroSearchBar(on_search)]
     hd = state.home_data
 
+    # Each section's "View All" navigates with pre-applied filters
+    # Format: packages_filtered:sort:type_key:official
+
     if hd.official_packages:
         sections.append(
             PackageSection(
@@ -37,7 +39,7 @@ def HomePage(
                 description="Official extension packages maintained by the Flet team",
                 packages=hd.official_packages,
                 on_package_click=on_package_click,
-                on_view_all=on_view_all,
+                on_view_all=lambda: on_navigate("packages_filtered:most downloads::true"),
                 max_cards=4,
                 cols_per_row=4,
             )
@@ -50,7 +52,7 @@ def HomePage(
                 description="Top trending packages in the last 30 days",
                 packages=hd.trending_packages,
                 on_package_click=on_package_click,
-                on_view_all=on_view_all,
+                on_view_all=lambda: on_navigate("packages_filtered:trending::"),
             )
         )
 
@@ -64,7 +66,7 @@ def HomePage(
                 ),
                 packages=hd.service_packages,
                 on_package_click=on_package_click,
-                on_view_all=on_view_all,
+                on_view_all=lambda: on_navigate("packages_filtered:most downloads:services:"),
             )
         )
 
@@ -78,7 +80,7 @@ def HomePage(
                 ),
                 packages=hd.ui_control_packages,
                 on_package_click=on_package_click,
-                on_view_all=on_view_all,
+                on_view_all=lambda: on_navigate("packages_filtered:most downloads:ui-controls:"),
             )
         )
 
@@ -92,7 +94,7 @@ def HomePage(
                 ),
                 packages=hd.python_packages,
                 on_package_click=on_package_click,
-                on_view_all=on_view_all,
+                on_view_all=lambda: on_navigate("packages_filtered:most downloads:python:"),
             )
         )
 

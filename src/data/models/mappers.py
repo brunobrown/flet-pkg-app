@@ -41,7 +41,7 @@ def github_repo_to_package(
         is_official=is_official,
         homepage_url=repo.get("homepage", "") or "",
         issues_url=f"https://github.com/{full_name}/issues",
-        pypi_name=pypi_name or name,
+        pypi_name=pypi_name,
         github_owner=owner,
         github_repo=name,
     )

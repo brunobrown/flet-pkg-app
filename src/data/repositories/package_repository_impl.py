@@ -7,20 +7,12 @@ from src.data.sources.clickhouse_source import ClickHouseSource
 from src.data.sources.github_source import GitHubSource
 from src.data.sources.package_discovery import PackageDiscovery, classify_by_summary
 from src.data.sources.pypi_source import PyPISource
-from src.domain.entities.package import Package, PackageType
+from src.domain.entities.package import Package
 from src.domain.repositories.package_repository import PackageRepository
 from src.services.cache_service import CacheService
+from src.services.package_index_service import PackageIndexService
 
 logger = get_logger(__name__)
-
-
-def _is_excluded(pkg: Package) -> bool:
-    name = pkg.pypi_name.lower() if pkg.pypi_name else pkg.name.lower()
-    return name in settings.EXCLUDED_PACKAGES
-
-
-def _filter_excluded(packages: list[Package]) -> list[Package]:
-    return [p for p in packages if not _is_excluded(p)]
 
 
 class PackageRepositoryImpl(PackageRepository):
@@ -30,69 +22,28 @@ class PackageRepositoryImpl(PackageRepository):
         pypi_source: PyPISource,
         clickhouse_source: ClickHouseSource,
         cache: CacheService,
+        index: PackageIndexService,
     ):
         self._github = github_source
         self._pypi = pypi_source
         self._ch = clickhouse_source
         self._cache = cache
+        self._index = index
         self._discovery = PackageDiscovery(github_source, pypi_source, cache)
 
-    # --- Downloads: ClickHouse batch with 24h cache ---
-
-    async def _get_downloads_batch(self, names: list[str]) -> dict[str, int]:
-        result: dict[str, int] = {}
-        uncached: list[str] = []
-        for name in names:
-            cached = self._cache.get(f"dl:{name}")
-            if cached is not None:
-                result[name] = cached
-            else:
-                uncached.append(name)
-
-        if not uncached:
-            return result
-
-        try:
-            ch_data = await self._ch.get_downloads_batch(uncached, days=30)
-            for name in uncached:
-                downloads = ch_data.get(name, 0)
-                result[name] = downloads
-                self._cache.set(f"dl:{name}", downloads, ttl=settings.CACHE_TTL_DOWNLOADS)
-            return result
-        except Exception:
-            logger.info("ClickHouse unavailable, falling back to pypistats")
-
-        for name in uncached:
-            downloads = await self._pypi.get_recent_downloads(name)
-            result[name] = downloads
-            self._cache.set(f"dl:{name}", downloads, ttl=settings.CACHE_TTL_DOWNLOADS)
-
-        return result
+    # --- Downloads (used only by detail pages) ---
 
     async def _get_downloads(self, name: str) -> int:
-        batch = await self._get_downloads_batch([name])
-        return batch.get(name, 0)
-
-    async def _enrich_with_downloads(self, packages: list[Package]) -> None:
-        names = [p.pypi_name or p.name for p in packages]
-        downloads = await self._get_downloads_batch(names)
-        for pkg in packages:
-            key = pkg.pypi_name or pkg.name
-            pkg.downloads = downloads.get(key, 0)
-
-    async def _enrich_with_pypi(self, packages: list[Package]) -> None:
-        await self._enrich_with_downloads(packages)
-
-        async def _fill_version(pkg: Package) -> None:
-            if not pkg.version:
-                try:
-                    pypi_data = await self._pypi.get_package_info(pkg.pypi_name)
-                    info = pypi_data.get("info", {})
-                    pkg.version = info.get("version", "")
-                except Exception:
-                    pass
-
-        await asyncio.gather(*[_fill_version(p) for p in packages if not p.version])
+        cached = self._cache.get(f"dl:{name}")
+        if cached is not None:
+            return cached
+        try:
+            ch_data = await self._ch.get_downloads_batch([name], days=30)
+            downloads = ch_data.get(name, 0)
+            self._cache.set(f"dl:{name}", downloads, ttl=settings.CACHE_TTL_DOWNLOADS)
+            return downloads
+        except Exception:
+            return 0
 
     async def _get_flet_repo_stars(self) -> int:
         cache_key = "flet_repo_stars"
@@ -107,89 +58,7 @@ class PackageRepositoryImpl(PackageRepository):
         except Exception:
             return 0
 
-    # --- Public methods ---
-
-    async def _fetch_all_filtered(
-        self,
-        query: str,
-        sort: str,
-        package_type: str | None,
-        official_only: bool,
-        pypi_only: bool,
-    ) -> list[Package]:
-        """Fetch, filter, and cache the full list of Flet packages for a query."""
-        cache_key = f"all_filtered:{query}:{sort}:{package_type}:{official_only}:{pypi_only}"
-        cached = self._cache.get(cache_key)
-        if cached is not None:
-            return cached
-
-        gh_sort = "stars"
-        if sort == "recently updated":
-            gh_sort = "updated"
-        elif sort == "newest package":
-            gh_sort = "updated"
-
-        search_q = f"{query} flet language:python" if query else "flet language:python"
-        if official_only:
-            search_q += " user:flet-dev"
-
-        # Fetch multiple pages from GitHub to get enough results after filtering
-        all_packages: list[Package] = []
-        seen_names: set[str] = set()
-        max_pages = 5  # Up to 500 results from GitHub
-
-        for gh_page in range(1, max_pages + 1):
-            try:
-                data = await self._github.search_repositories(
-                    query=search_q,
-                    sort=gh_sort,
-                    page=gh_page,
-                    per_page=100,
-                )
-                items = data.get("items", [])
-                if not items:
-                    break
-
-                packages = [github_repo_to_package(item) for item in items]
-                packages = _filter_excluded(packages)
-
-                for pkg in packages:
-                    pkg.package_type = classify_by_summary(pkg.description, pkg.name)
-
-                packages = await self._discovery.filter_flet_related(packages, pypi_only=pypi_only)
-
-                for pkg in packages:
-                    key = pkg.pypi_name or pkg.name
-                    if key not in seen_names:
-                        seen_names.add(key)
-                        all_packages.append(pkg)
-
-                # Stop if GitHub returned fewer than requested
-                if len(items) < 100:
-                    break
-            except Exception as e:
-                logger.error("Search page %d error: %s", gh_page, e)
-                break
-
-        # Apply type filter
-        if package_type == "Services":
-            all_packages = [p for p in all_packages if p.package_type == PackageType.SERVICE]
-        elif package_type == "UI Controls":
-            all_packages = [p for p in all_packages if p.package_type == PackageType.UI_CONTROL]
-
-        # Enrich all with downloads for sorting
-        await self._enrich_with_pypi(all_packages)
-
-        # Sort
-        if sort == "most downloads":
-            all_packages.sort(key=lambda p: p.downloads, reverse=True)
-        elif sort == "most stars":
-            all_packages.sort(key=lambda p: p.stars, reverse=True)
-        elif sort == "trending":
-            all_packages.sort(key=lambda p: p.stars + p.downloads, reverse=True)
-
-        self._cache.set(cache_key, all_packages, ttl=3600)
-        return all_packages
+    # --- Search: queries the in-memory index (zero HTTP) ---
 
     async def search_packages(
         self,
@@ -201,20 +70,59 @@ class PackageRepositoryImpl(PackageRepository):
         official_only: bool = False,
         pypi_only: bool = True,
     ) -> tuple[list[Package], int]:
-        try:
-            all_packages = await self._fetch_all_filtered(
-                query, sort, package_type, official_only, pypi_only
-            )
+        await self._index.wait_until_ready()
+        return self._index.query(
+            text=query,
+            sort=sort,
+            package_type=package_type,
+            official_only=official_only,
+            pypi_only=pypi_only,
+            page=page,
+            per_page=per_page,
+        )
 
-            total = len(all_packages)
-            start = (page - 1) * per_page
-            end = start + per_page
-            page_packages = all_packages[start:end]
+    # --- Home page sections: also from the index ---
 
-            return page_packages, total
-        except Exception as e:
-            logger.error("Search error: %s", e)
-            return [], 0
+    async def get_official_packages(self) -> list[Package]:
+        await self._index.wait_until_ready()
+        packages, _ = self._index.query(official_only=True, sort="most downloads", per_page=5)
+        return packages
+
+    async def get_trending_packages(self, limit: int = 6, pypi_only: bool = True) -> list[Package]:
+        await self._index.wait_until_ready()
+        packages, _ = self._index.query(sort="trending", pypi_only=pypi_only, per_page=limit)
+        return packages
+
+    async def get_service_packages(self, limit: int = 6, pypi_only: bool = True) -> list[Package]:
+        await self._index.wait_until_ready()
+        packages, _ = self._index.query(
+            package_type="Services", sort="most downloads", pypi_only=pypi_only, per_page=limit
+        )
+        return packages
+
+    async def get_ui_control_packages(
+        self, limit: int = 6, pypi_only: bool = True
+    ) -> list[Package]:
+        await self._index.wait_until_ready()
+        packages, _ = self._index.query(
+            package_type="UI Controls",
+            sort="most downloads",
+            pypi_only=pypi_only,
+            per_page=limit,
+        )
+        return packages
+
+    async def get_python_packages(self, limit: int = 6, pypi_only: bool = True) -> list[Package]:
+        await self._index.wait_until_ready()
+        packages, _ = self._index.query(
+            package_type="Python Package",
+            sort="most downloads",
+            pypi_only=pypi_only,
+            per_page=limit,
+        )
+        return packages
+
+    # --- Detail pages: still make HTTP calls (per-package, cached) ---
 
     async def get_package_detail(self, owner: str, repo: str) -> Package:
         cache_key = f"detail:{owner}/{repo}"
@@ -255,7 +163,6 @@ class PackageRepositoryImpl(PackageRepository):
         if cached is not None:
             return cached
 
-        # Try PyPI first
         pkg: Package | None = None
         try:
             pypi_data = await self._pypi.get_package_info(package_name)
@@ -266,19 +173,15 @@ class PackageRepositoryImpl(PackageRepository):
         except Exception:
             logger.info("Package %s not on PyPI, trying GitHub", package_name)
 
-        # Fallback: search GitHub for the package
         if pkg is None:
             pkg = await self._fetch_github_only_package(package_name)
             if pkg is None:
                 raise Exception(f"Package '{package_name}' not found on PyPI or GitHub")
 
-        # Check if official (monorepo) package
         official_names = await self._discovery.get_official_extension_names()
         is_official = package_name in official_names
 
-        # Enrich with GitHub data
         if is_official:
-            # Monorepo package — README from subpath, stars from main repo
             pkg.github_owner = "flet-dev"
             pkg.github_repo = "flet"
             pkg.repository_url = (
@@ -296,12 +199,10 @@ class PackageRepositoryImpl(PackageRepository):
                 )
                 pkg.readme = readme
                 pkg.changelog = changelog
-                flet_stars = await self._get_flet_repo_stars()
-                pkg.stars = flet_stars
+                pkg.stars = await self._get_flet_repo_stars()
             except Exception:
                 pass
         elif pkg.github_owner and pkg.github_repo:
-            # Non-official package with GitHub repo
             try:
                 readme, changelog = await asyncio.gather(
                     self._github.get_readme(pkg.github_owner, pkg.github_repo),
@@ -329,7 +230,6 @@ class PackageRepositoryImpl(PackageRepository):
         return pkg
 
     async def _fetch_github_only_package(self, package_name: str) -> Package | None:
-        """Search GitHub for a package that doesn't exist on PyPI."""
         try:
             data = await self._github.search_repositories(
                 query=f"{package_name} language:python",
@@ -337,13 +237,11 @@ class PackageRepositoryImpl(PackageRepository):
                 per_page=5,
             )
             items = data.get("items", [])
-            # Find best match by name
             for item in items:
                 if item.get("name", "").lower() == package_name.lower():
                     pkg = github_repo_to_package(item)
                     pkg.package_type = classify_by_summary(pkg.description, pkg.name)
                     return pkg
-            # No exact match — take first result if name is close
             if items:
                 pkg = github_repo_to_package(items[0])
                 pkg.package_type = classify_by_summary(pkg.description, pkg.name)
@@ -352,146 +250,7 @@ class PackageRepositoryImpl(PackageRepository):
             logger.warning("GitHub search failed for %s", package_name)
         return None
 
-    async def get_official_packages(self) -> list[Package]:
-        cache_key = "official_packages"
-        cached = self._cache.get(cache_key)
-        if cached is not None:
-            return cached
-
-        try:
-            flet_stars = await self._get_flet_repo_stars()
-            packages = await self._discovery.fetch_official_packages()
-
-            for pkg in packages:
-                if not pkg.stars:
-                    pkg.stars = flet_stars
-
-            await self._enrich_with_downloads(packages)
-            packages.sort(key=lambda p: p.downloads, reverse=True)
-            self._cache.set(cache_key, packages[:5], ttl=3600)
-            return packages[:5]
-        except Exception as e:
-            logger.error("Error fetching official packages: %s", e)
-            return []
-
-    async def get_trending_packages(self, limit: int = 6, pypi_only: bool = True) -> list[Package]:
-        cache_key = f"trending:{limit}:{pypi_only}"
-        cached = self._cache.get(cache_key)
-        if cached is not None:
-            return cached
-
-        try:
-            data = await self._github.search_repositories(
-                query="flet topic:flet language:python pushed:>2025-01-01",
-                sort="stars",
-                per_page=limit + 30,
-            )
-            items = data.get("items", [])
-            packages = [github_repo_to_package(item) for item in items]
-            packages = _filter_excluded(packages)
-
-            # Only real Flet packages (exist on PyPI + related to flet)
-            packages = await self._discovery.filter_flet_related(packages, pypi_only=pypi_only)
-
-            for pkg in packages:
-                pkg.package_type = classify_by_summary(pkg.description, pkg.name)
-
-            await self._enrich_with_downloads(packages)
-            packages = packages[:limit]
-            self._cache.set(cache_key, packages, ttl=3600)
-            return packages
-        except Exception as e:
-            logger.error("Error fetching trending packages: %s", e)
-            return []
-
-    async def get_service_packages(self, limit: int = 6, pypi_only: bool = True) -> list[Package]:
-        cache_key = f"services:{limit}"
-        cached = self._cache.get(cache_key)
-        if cached is not None:
-            return cached
-
-        try:
-            packages = await self._discovery.fetch_official_packages()
-            # Add community service packages from trending
-            community = await self._get_community_packages(pypi_only=pypi_only)
-            packages.extend(community)
-
-            # Filter to services only
-            packages = [p for p in packages if p.package_type == PackageType.SERVICE]
-
-            flet_stars = await self._get_flet_repo_stars()
-            for pkg in packages:
-                if pkg.is_official and not pkg.stars:
-                    pkg.stars = flet_stars
-
-            await self._enrich_with_downloads(packages)
-            packages.sort(key=lambda p: p.downloads, reverse=True)
-            self._cache.set(cache_key, packages[:limit], ttl=3600)
-            return packages[:limit]
-        except Exception as e:
-            logger.error("Error fetching service packages: %s", e)
-            return []
-
-    async def get_ui_control_packages(
-        self, limit: int = 6, pypi_only: bool = True
-    ) -> list[Package]:
-        cache_key = f"ui_controls:{limit}"
-        cached = self._cache.get(cache_key)
-        if cached is not None:
-            return cached
-
-        try:
-            packages = await self._discovery.fetch_official_packages()
-            community = await self._get_community_packages(pypi_only=pypi_only)
-            packages.extend(community)
-
-            # Filter to UI Controls only
-            packages = [p for p in packages if p.package_type == PackageType.UI_CONTROL]
-
-            flet_stars = await self._get_flet_repo_stars()
-            for pkg in packages:
-                if pkg.is_official and not pkg.stars:
-                    pkg.stars = flet_stars
-
-            await self._enrich_with_downloads(packages)
-            packages.sort(key=lambda p: p.downloads, reverse=True)
-            self._cache.set(cache_key, packages[:limit], ttl=3600)
-            return packages[:limit]
-        except Exception as e:
-            logger.error("Error fetching UI control packages: %s", e)
-            return []
-
-    async def get_python_packages(self, limit: int = 6, pypi_only: bool = True) -> list[Package]:
-        cache_key = f"python_packages:{limit}:{pypi_only}"
-        cached = self._cache.get(cache_key)
-        if cached is not None:
-            return cached
-
-        try:
-            # Fetch extra to compensate for filtering
-            data = await self._github.search_repositories(
-                query="topic:flet language:python NOT flet-dev",
-                sort="stars",
-                per_page=limit + 30,
-            )
-            items = data.get("items", [])
-            packages = [github_repo_to_package(item) for item in items]
-            packages = _filter_excluded(packages)
-
-            # Only real Flet packages, exclude Services/UI Controls
-            packages = await self._discovery.filter_flet_related(packages, pypi_only=pypi_only)
-            packages = [p for p in packages if p.package_type == PackageType.PYTHON_PACKAGE]
-
-            for pkg in packages:
-                pkg.package_type = PackageType.PYTHON_PACKAGE
-
-            await self._enrich_with_downloads(packages)
-            packages = packages[:limit]
-            self._cache.set(cache_key, packages, ttl=3600)
-            return packages
-        except Exception as e:
-            logger.error("Error fetching Python packages: %s", e)
-            return []
+    # --- Star/unstar (unchanged) ---
 
     async def star_repository(self, owner: str, repo: str, token: str) -> bool:
         return await self._github.star_repo(owner, repo, token)
@@ -501,31 +260,3 @@ class PackageRepositoryImpl(PackageRepository):
 
     async def is_starred(self, owner: str, repo: str, token: str) -> bool:
         return await self._github.is_starred(owner, repo, token)
-
-    # --- Private helpers ---
-
-    async def _get_community_packages(self, pypi_only: bool = True) -> list[Package]:
-        """Discover community packages that depend on flet (not in monorepo)."""
-        cache_key = f"community_flet_packages:{pypi_only}"
-        cached = self._cache.get(cache_key)
-        if cached is not None:
-            return cached
-
-        try:
-            data = await self._github.search_repositories(
-                query="flet topic:flet language:python NOT user:flet-dev",
-                sort="stars",
-                per_page=30,
-            )
-            items = data.get("items", [])
-            packages = [github_repo_to_package(item) for item in items]
-            packages = _filter_excluded(packages)
-            packages = await self._discovery.filter_flet_related(packages, pypi_only=pypi_only)
-
-            for pkg in packages:
-                pkg.package_type = classify_by_summary(pkg.description, pkg.name)
-
-            self._cache.set(cache_key, packages, ttl=3600)
-            return packages
-        except Exception:
-            return []

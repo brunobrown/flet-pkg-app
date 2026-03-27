@@ -10,7 +10,7 @@ import asyncio
 
 from config import settings
 from src.core.logger import get_logger
-from src.data.models.mappers import pypi_info_to_package
+from src.data.models.mappers import github_repo_to_package, pypi_info_to_package
 from src.data.sources.github_source import GitHubSource
 from src.data.sources.pypi_source import PyPISource
 from src.domain.entities.package import Package, PackageType
@@ -42,6 +42,11 @@ def is_flet_dependency(requires_dist: list[str] | None) -> bool:
     return False
 
 
+def _is_excluded(pkg: Package) -> bool:
+    name = pkg.pypi_name.lower() if pkg.pypi_name else pkg.name.lower()
+    return name in settings.EXCLUDED_PACKAGES
+
+
 class PackageDiscovery:
     """Discovers and classifies Flet packages dynamically."""
 
@@ -51,7 +56,6 @@ class PackageDiscovery:
         self._cache = cache
 
     # Fallback: known official extensions discovered from the monorepo.
-    # Used when GitHub API is rate-limited (403). Updated automatically when API works.
     _FALLBACK_OFFICIAL = [
         "flet-ads",
         "flet-audio",
@@ -89,13 +93,11 @@ class PackageDiscovery:
                 if item.get("type") == "dir" and item["name"] not in settings.EXCLUDED_PACKAGES
             ]
             if names:
-                # Cache for 24h — monorepo changes rarely
                 self._cache.set(cache_key, names, ttl=86400)
                 return names
         except Exception as e:
             logger.warning("GitHub API unavailable for official packages: %s", e)
 
-        # Fallback when GitHub is rate-limited or unavailable
         logger.info("Using fallback official package list")
         self._cache.set(cache_key, self._FALLBACK_OFFICIAL, ttl=3600)
         return self._FALLBACK_OFFICIAL
@@ -133,42 +135,110 @@ class PackageDiscovery:
                 packages.append(pkg)
         return packages
 
-    async def is_flet_related(self, name: str, pypi_only: bool = True) -> bool:
+    # --- Smart flet-related check with cache ---
+
+    async def is_flet_related(
+        self, name: str, pypi_only: bool = True, topics: list[str] | None = None
+    ) -> bool:
         """Check if a package is related to Flet.
 
-        Args:
-            name: Package name.
-            pypi_only: If True, only packages on PyPI pass. If False, also accept
-                       GitHub-only packages whose name starts with 'flet'.
+        Uses fast heuristics first (name prefix, topics) to skip PyPI calls.
+        Results are cached for 24h to speed up re-indexing.
         """
         name_lower = name.lower()
+
+        # Check cache first
+        cache_key = f"flet_related:{name_lower}:{pypi_only}"
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        # Fast path: obvious flet package by name
+        if name_lower.startswith(("flet-", "flet_")):
+            if not pypi_only:
+                self._cache.set(cache_key, True, ttl=86400)
+                return True
+            # Verify it exists on PyPI
+            try:
+                await self._pypi.get_package_info(name)
+                self._cache.set(cache_key, True, ttl=86400)
+                return True
+            except Exception:
+                self._cache.set(cache_key, False, ttl=86400)
+                return False
+
+        # For non-"flet-" packages: check PyPI metadata for actual flet dependency.
+        # Having "flet" in GitHub topics alone is NOT enough — the repo might just
+        # be a project that uses Flet, not a reusable package/extension.
+        has_flet_topic = topics and "flet" in [t.lower() for t in topics]
+
         try:
             data = await self._pypi.get_package_info(name)
             info = data.get("info", {})
-            # Exists on PyPI — check if related to flet
-            if name_lower.startswith("flet"):
-                return True
+            related = False
             if is_flet_dependency(info.get("requires_dist")):
-                return True
-            summary = (info.get("summary") or "").lower()
-            if "flet" in summary:
-                return True
-            return False
+                related = True
+            elif "flet" in (info.get("summary") or "").lower():
+                related = True
+            self._cache.set(cache_key, related, ttl=86400)
+            return related
         except Exception:
-            # Not on PyPI
-            if pypi_only:
-                return False
-            # When pypi_only=False, accept GitHub-only if name hints flet
-            return name_lower.startswith("flet")
+            # Not on PyPI — accept only if has flet topic AND pypi_only is False
+            if not pypi_only and has_flet_topic:
+                self._cache.set(cache_key, True, ttl=86400)
+                return True
+            self._cache.set(cache_key, False, ttl=3600)
+            return False
 
     async def filter_flet_related(
         self, packages: list[Package], pypi_only: bool = True
     ) -> list[Package]:
         """Filter packages to only those related to Flet."""
         checks = await asyncio.gather(
-            *[self.is_flet_related(p.pypi_name or p.name, pypi_only) for p in packages]
+            *[self.is_flet_related(p.pypi_name or p.name, pypi_only, p.topics) for p in packages]
         )
         return [p for p, is_flet in zip(packages, checks) if is_flet]
+
+    # --- Parallel GitHub fetch for index building ---
+
+    async def fetch_all_github_packages(self, pypi_only: bool = True) -> list[Package]:
+        """Fetch all flet packages from GitHub search (parallel pages) + filter."""
+        max_pages = settings.get("INDEX_MAX_GITHUB_PAGES", 5)
+
+        # Fetch all pages in parallel
+        async def _fetch_page(page_num: int) -> list[dict]:
+            try:
+                data = await self._github.search_repositories(
+                    query="flet language:python",
+                    sort="stars",
+                    page=page_num,
+                    per_page=100,
+                )
+                return data.get("items", [])
+            except Exception as e:
+                logger.error("GitHub search page %d error: %s", page_num, e)
+                return []
+
+        page_results = await asyncio.gather(*[_fetch_page(p) for p in range(1, max_pages + 1)])
+
+        # Deduplicate and convert
+        seen: set[str] = set()
+        all_packages: list[Package] = []
+        for items in page_results:
+            for item in items:
+                pkg = github_repo_to_package(item)
+                if _is_excluded(pkg):
+                    continue
+                key = pkg.pypi_name or pkg.name
+                if key in seen:
+                    continue
+                seen.add(key)
+                pkg.package_type = classify_by_summary(pkg.description, pkg.name)
+                all_packages.append(pkg)
+
+        # Filter to flet-related only
+        all_packages = await self.filter_flet_related(all_packages, pypi_only=pypi_only)
+        return all_packages
 
     async def get_service_extension_names(self) -> list[str]:
         """Get names of official extensions classified as Services."""
