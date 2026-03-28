@@ -1,6 +1,5 @@
 """Tests for package discovery — classify_by_summary, is_flet_dependency, is_flet_related."""
 
-
 from src.data.sources.package_discovery import classify_by_summary, is_flet_dependency
 from src.domain.entities.package import PackageType
 

@@ -14,6 +14,7 @@ def AppHeader(
     on_navigate_home: object = None,
     on_search: object = None,
     on_toggle_pypi_filter: object = None,
+    on_navigate_guide: object = None,
     is_dark: bool = True,
     show_logo: bool = True,
     show_pypi_only: bool = True,
@@ -82,7 +83,7 @@ def AppHeader(
 
         desktop_items.extend(
             [
-                _help_menu(on_toggle_pypi_filter, show_pypi_only),
+                _help_menu(on_toggle_pypi_filter, show_pypi_only, on_navigate_guide),
                 _theme_button(theme_icon, on_theme_toggle),
             ]
         )
@@ -95,7 +96,7 @@ def AppHeader(
         desktop_row = ft.Row(
             controls=[
                 ft.Container(expand=True),
-                _help_menu(on_toggle_pypi_filter, show_pypi_only),
+                _help_menu(on_toggle_pypi_filter, show_pypi_only, on_navigate_guide),
                 _theme_button(theme_icon, on_theme_toggle),
             ],
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -191,7 +192,11 @@ def AppHeader(
     )
 
 
-def _help_menu(on_toggle_pypi_filter: object = None, show_pypi_only: bool = True) -> ft.Control:
+def _help_menu(
+    on_toggle_pypi_filter: object = None,
+    show_pypi_only: bool = True,
+    on_navigate_guide: object = None,
+) -> ft.Control:
     return ft.PopupMenuButton(
         content=ft.Row(
             controls=[
@@ -201,8 +206,10 @@ def _help_menu(on_toggle_pypi_filter: object = None, show_pypi_only: bool = True
             spacing=0,
         ),
         items=[
-            ft.PopupMenuItem(content="Introduction"),
-            ft.PopupMenuItem(content="API Reference"),
+            ft.PopupMenuItem(
+                content="Developer Guide",
+                on_click=lambda _: on_navigate_guide() if on_navigate_guide else None,
+            ),
             ft.PopupMenuItem(content="About Flet PKG"),
             ft.PopupMenuItem(),  # divider
             ft.PopupMenuItem(

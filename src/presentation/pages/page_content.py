@@ -3,6 +3,7 @@
 import flet as ft
 
 from src.domain.entities.package import Package
+from src.presentation.pages.guide.developer_guide_page import DeveloperGuidePage
 from src.presentation.pages.home.home_page import HomePage
 from src.presentation.pages.package_detail.package_detail_page import PackageDetailPage
 from src.presentation.pages.packages.packages_page import PackagesPage
@@ -20,7 +21,9 @@ def PageContent() -> ft.Control:
             name = pkg.pypi_name or pkg.name
             ctx.navigate(f"detail:{name}")
 
-    if state.current_page == "detail":
+    if state.current_page == "guide":
+        return DeveloperGuidePage()
+    elif state.current_page == "detail":
         return PackageDetailPage(
             state=pkg_state,
             user=state.user,

@@ -24,7 +24,13 @@ def App(ctx_value: AppContextValue, state: AppState) -> ft.View:
                 ref.page.run_task(ref.show_drawer)
 
     # Drawer (mobile)
+    def on_drawer_change(e: ft.ControlEvent) -> None:
+        index = e.control.selected_index
+        if index == 0:  # Developer Guide
+            ctx_value.navigate("guide")
+
     drawer = ft.NavigationDrawer(
+        on_change=on_drawer_change,
         controls=[
             ft.Container(
                 content=ft.Row(
@@ -44,8 +50,7 @@ def App(ctx_value: AppContextValue, state: AppState) -> ft.View:
                 padding=ft.Padding(left=16, top=20, right=16, bottom=10),
             ),
             ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
-            ft.NavigationDrawerDestination(label="Introduction", icon=ft.Icons.MENU_BOOK),
-            ft.NavigationDrawerDestination(label="API Reference", icon=ft.Icons.CODE),
+            ft.NavigationDrawerDestination(label="Developer Guide", icon=ft.Icons.MENU_BOOK),
             ft.NavigationDrawerDestination(label="About Flet PKG", icon=ft.Icons.INFO_OUTLINE),
             ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
             ft.Container(
@@ -83,6 +88,7 @@ def App(ctx_value: AppContextValue, state: AppState) -> ft.View:
                         on_navigate_home=lambda: ctx_value.navigate("home"),
                         on_search=ctx_value.search if state.current_page == "packages" else None,
                         on_toggle_pypi_filter=ctx_value.toggle_pypi_filter,
+                        on_navigate_guide=lambda: ctx_value.navigate("guide"),
                         is_dark=state.is_dark,
                         show_logo=state.current_page != "home",
                         show_pypi_only=state.show_pypi_only,

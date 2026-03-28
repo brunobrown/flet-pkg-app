@@ -1,5 +1,11 @@
-# flet-pkg-app
+"""Developer Guide page — instructions for package authors."""
 
+import flet as ft
+
+from src.presentation.components.common.footer import AppFooter
+from src.presentation.themes.colors import FLET_PINK
+
+_GUIDE_CONTENT = """\
 # Developer Guide
 
 Welcome! This guide explains how to make your Flet package easily discoverable \
@@ -89,7 +95,7 @@ A complete README is essential. Include:
 - Installation instructions (`pip install` / `uv add`)
 - Usage examples with code snippets
 - Screenshots (if visual)
-- Supported platforms (Android, iOS, Web, Desktop)
+- Supported platforms (Android, iOS, Web, macOS, Windows, Linux)
 
 ### CHANGELOG.md
 
@@ -166,3 +172,61 @@ If your package is not appearing on Flet PKG, check that:
 3. It is not in the excluded list (core packages like `flet`, `flet-cli`, etc.)
 
 The index refreshes every hour. New packages may take up to 60 minutes to appear.
+"""
+
+
+@ft.component
+def DeveloperGuidePage() -> ft.Control:
+    return ft.Column(
+        controls=[
+            ft.Container(
+                content=ft.Column(
+                    controls=[
+                        ft.Row(
+                            controls=[
+                                ft.Icon(ft.Icons.MENU_BOOK, size=28, color=FLET_PINK),
+                                ft.Text(
+                                    "Developer Guide",
+                                    size=24,
+                                    weight=ft.FontWeight.BOLD,
+                                    color=ft.Colors.ON_SURFACE,
+                                ),
+                            ],
+                            spacing=12,
+                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        ),
+                        ft.Text(
+                            "How to publish your package on Flet PKG",
+                            size=14,
+                            color=ft.Colors.ON_SURFACE_VARIANT,
+                        ),
+                    ],
+                    spacing=4,
+                ),
+                padding=ft.Padding(left=40, top=20, right=40, bottom=12),
+                bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
+            ),
+            ft.Container(
+                content=ft.ListView(
+                    controls=[
+                        ft.Container(
+                            content=ft.Markdown(
+                                value=_GUIDE_CONTENT,
+                                selectable=True,
+                                extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+                                auto_follow_links=True,
+                                auto_follow_links_target=ft.UrlTarget.BLANK,
+                                shrink_wrap=True,
+                                fit_content=True,
+                            ),
+                            padding=ft.Padding(left=40, top=20, right=40, bottom=20),
+                        ),
+                    ],
+                ),
+                expand=True,
+            ),
+            AppFooter(),
+        ],
+        spacing=0,
+        expand=True,
+    )

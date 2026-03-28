@@ -118,6 +118,8 @@ def main(page: ft.Page) -> None:
 
         if path == "" or path == "/":
             page.run_task(_load_home)
+        elif path == "guide":
+            app_state.current_page = "guide"
         elif path == "packages":
             query = params.get("q", "")
             sort = params.get("sort", "default ranking")
@@ -174,6 +176,8 @@ def main(page: ft.Page) -> None:
         """
         if target == "home":
             _push("/")
+        elif target == "guide":
+            _push("/guide")
         elif target.startswith("detail:"):
             name = target.split(":", 1)[1]
             _push(f"/packages/{name}")
