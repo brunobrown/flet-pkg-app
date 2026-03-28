@@ -13,6 +13,7 @@ dependencies = [
 dev = [
     "flet[all]>=0.83.0",
     "pytest>=9.0.2",
+    "pytest-asyncio>=0.24.0",
 ]
 
 
