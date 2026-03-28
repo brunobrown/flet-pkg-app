@@ -181,6 +181,7 @@ def AppHeader(
     mobile_header = ft.Container(
         content=ft.Column(controls=mobile_header_controls, spacing=4),
         col={ft.ResponsiveRowBreakpoint.XS: 12, ft.ResponsiveRowBreakpoint.MD: 0},
+        clip_behavior=ft.ClipBehavior.HARD_EDGE,
     )
 
     return ft.Container(
