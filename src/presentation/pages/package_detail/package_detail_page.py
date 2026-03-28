@@ -46,6 +46,22 @@ def PackageDetailPage(
         if on_copy:
             on_copy(pkg.pip_install_command)
 
+    def handle_share(_e: ft.ControlEvent) -> None:
+        if on_copy:
+            name = pkg.pypi_name or pkg.name
+            card = (
+                f":: {name} {pkg.version}\n"
+                f"{pkg.description}\n"
+                f"Stars: {format_number(pkg.stars)}"
+                f" | Downloads: {format_number(pkg.downloads)}\n"
+            )
+            if pkg.publisher:
+                card += f"Publisher: {pkg.publisher}"
+            if pkg.license:
+                card += f" | {pkg.license}"
+            card += f"\n/packages/{name}"
+            on_copy(card)
+
     def _handle_markdown_link(e: ft.ControlEvent) -> None:
         url = e.data or ""
         if url.startswith("#"):
@@ -284,98 +300,51 @@ def PackageDetailPage(
             ft.Container(
                 content=ft.Column(
                     controls=[
-                        ft.Row(
+                        ft.ResponsiveRow(
                             controls=[
-                                ft.Row(
-                                    controls=[
-                                        ft.Text(
-                                            f"{pkg.name} {pkg.version}",
-                                            size=24,
-                                            weight=ft.FontWeight.BOLD,
-                                            color=ft.Colors.ON_SURFACE,
-                                        ),
-                                        ft.IconButton(
-                                            icon=ft.Icons.COPY,
-                                            icon_size=16,
-                                            icon_color=ft.Colors.ON_SURFACE_VARIANT,
-                                            tooltip=pkg.pip_install_command,
-                                            on_click=handle_copy,
-                                        ),
-                                    ],
-                                    spacing=4,
-                                ),
-                                # LIKE button (pink, heart icon + count)
                                 ft.Container(
                                     content=ft.Row(
                                         controls=[
-                                            ft.Icon(
-                                                ft.Icons.FAVORITE_OUTLINE,
-                                                size=16,
-                                                color=ft.Colors.WHITE,
-                                            ),
                                             ft.Text(
-                                                "LIKE",
-                                                size=12,
+                                                f"{pkg.name} {pkg.version}",
+                                                size=24,
                                                 weight=ft.FontWeight.BOLD,
-                                                color=ft.Colors.WHITE,
+                                                color=ft.Colors.ON_SURFACE,
                                             ),
-                                            # Arrow + count badge
-                                            ft.Row(
-                                                controls=[
-                                                    # Arrow (rotated square)
-                                                    ft.Container(
-                                                        width=6,
-                                                        height=6,
-                                                        bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
-                                                        rotate=ft.Rotate(0.785),
-                                                        margin=ft.Margin(
-                                                            left=1, top=0, right=-4, bottom=4
-                                                        ),
-                                                    ),
-                                                    # Count badge
-                                                    ft.Container(
-                                                        content=ft.Text(
-                                                            format_number(pkg.stars),
-                                                            size=12,
-                                                            weight=ft.FontWeight.BOLD,
-                                                            color=ft.Colors.ON_SURFACE,
-                                                            text_align=ft.TextAlign.CENTER,
-                                                        ),
-                                                        bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
-                                                        border_radius=ft.BorderRadius(
-                                                            top_left=0,
-                                                            bottom_left=0,
-                                                            top_right=16,
-                                                            bottom_right=16,
-                                                        ),
-                                                        alignment=ft.Alignment.CENTER,
-                                                        padding=ft.Padding(
-                                                            left=6,
-                                                            top=2,
-                                                            right=10,
-                                                            bottom=2,
-                                                        ),
-                                                    ),
-                                                ],
-                                                spacing=0,
-                                                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                                            ft.IconButton(
+                                                icon=ft.Icons.COPY,
+                                                icon_size=16,
+                                                icon_color=ft.Colors.ON_SURFACE_VARIANT,
+                                                tooltip=pkg.pip_install_command,
+                                                on_click=handle_copy,
+                                            ),
+                                            ft.IconButton(
+                                                icon=ft.Icons.SHARE,
+                                                icon_size=16,
+                                                icon_color=ft.Colors.ON_SURFACE_VARIANT,
+                                                tooltip="Share package",
+                                                on_click=handle_share,
                                             ),
                                         ],
-                                        spacing=4,
+                                        spacing=0,
                                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                                     ),
-                                    bgcolor=FLET_PINK,
-                                    border_radius=20,
-                                    padding=ft.Padding(left=8, top=2, right=2, bottom=2),
-                                    clip_behavior=ft.ClipBehavior.HARD_EDGE,
-                                    gradient=ft.LinearGradient(
-                                        begin=ft.Alignment.CENTER_LEFT,
-                                        end=ft.Alignment.CENTER_RIGHT,
-                                        colors=["#ee3167", "#5673b0", "#5abae7"],
+                                    col={
+                                        ft.ResponsiveRowBreakpoint.XS: 12,
+                                        ft.ResponsiveRowBreakpoint.MD: 8,
+                                    },
+                                ),
+                                ft.Container(
+                                    content=ft.Row(
+                                        controls=[_like_button(pkg)],
+                                        alignment=ft.MainAxisAlignment.END,
                                     ),
+                                    col={
+                                        ft.ResponsiveRowBreakpoint.XS: 12,
+                                        ft.ResponsiveRowBreakpoint.MD: 4,
+                                    },
                                 ),
                             ],
-                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
                         ft.Row(
@@ -460,6 +429,56 @@ def _sidebar_section(title: str, controls: list[ft.Control]) -> ft.Control:
             *controls,
         ],
         spacing=6,
+    )
+
+
+def _like_button(pkg) -> ft.Control:
+    """LIKE button with gradient, heart icon, arrow, and count badge."""
+    return ft.Container(
+        content=ft.Row(
+            controls=[
+                ft.Icon(ft.Icons.FAVORITE_OUTLINE, size=16, color=ft.Colors.WHITE),
+                ft.Text("LIKE", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                ft.Row(
+                    controls=[
+                        ft.Container(
+                            width=6,
+                            height=6,
+                            bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
+                            rotate=ft.Rotate(0.785),
+                            margin=ft.Margin(left=1, top=0, right=-4, bottom=4),
+                        ),
+                        ft.Container(
+                            content=ft.Text(
+                                format_number(pkg.stars),
+                                size=12,
+                                weight=ft.FontWeight.BOLD,
+                                color=ft.Colors.ON_SURFACE,
+                                text_align=ft.TextAlign.CENTER,
+                            ),
+                            bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
+                            border_radius=ft.BorderRadius(
+                                top_left=0, bottom_left=0, top_right=16, bottom_right=16
+                            ),
+                            alignment=ft.Alignment.CENTER,
+                            padding=ft.Padding(left=6, top=2, right=10, bottom=2),
+                        ),
+                    ],
+                    spacing=0,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+            ],
+            spacing=4,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+        border_radius=20,
+        padding=ft.Padding(left=8, top=2, right=2, bottom=2),
+        clip_behavior=ft.ClipBehavior.HARD_EDGE,
+        gradient=ft.LinearGradient(
+            begin=ft.Alignment.CENTER_LEFT,
+            end=ft.Alignment.CENTER_RIGHT,
+            colors=["#ee3167", "#5673b0", "#5abae7"],
+        ),
     )
 
 

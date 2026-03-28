@@ -3,16 +3,40 @@
 import flet as ft
 
 from src.domain.entities.package import Package
+from src.presentation.themes.colors import FLET_PINK
 from src.utils.formatters import format_date, format_number, truncate
+
+_CARD_SHADOW = ft.BoxShadow(
+    spread_radius=0,
+    blur_radius=8,
+    color=ft.Colors.with_opacity(0.15, ft.Colors.BLACK),
+    offset=ft.Offset(0, 2),
+)
+
+_NEON_BORDER = ft.Border(
+    left=ft.BorderSide(1.5, FLET_PINK),
+    top=ft.BorderSide(1.5, FLET_PINK),
+    right=ft.BorderSide(1.5, FLET_PINK),
+    bottom=ft.BorderSide(1.5, FLET_PINK),
+)
+
+_DEFAULT_BORDER = ft.Border(
+    left=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
+    top=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
+    right=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
+    bottom=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
+)
 
 
 @ft.component
 def PackageCard(package: Package, on_click: object, on_copy: object) -> ft.Control:
+    hovered, set_hovered = ft.use_state(False)
+
     def handle_copy(_e: ft.ControlEvent) -> None:
         if on_copy:
             on_copy(package.pip_install_command)
 
-    def handle_click(_e: ft.ControlEvent) -> None:
+    def handle_click(_e) -> None:
         if on_click:
             on_click(package)
 
@@ -26,22 +50,18 @@ def PackageCard(package: Package, on_click: object, on_copy: object) -> ft.Contr
         for t in package.topics[:5]
     ]
 
-    return ft.Container(
+    card = ft.Container(
         content=ft.Column(
             controls=[
                 ft.Row(
                     controls=[
                         ft.Row(
                             controls=[
-                                ft.Container(
-                                    content=ft.Text(
-                                        package.name,
-                                        size=20,
-                                        weight=ft.FontWeight.BOLD,
-                                        color=ft.Colors.PRIMARY,
-                                    ),
-                                    on_click=handle_click,
-                                    ink=True,
+                                ft.Text(
+                                    package.name,
+                                    size=20,
+                                    weight=ft.FontWeight.BOLD,
+                                    color=ft.Colors.PRIMARY,
                                 ),
                                 ft.IconButton(
                                     icon=ft.Icons.COPY,
@@ -59,13 +79,17 @@ def PackageCard(package: Package, on_click: object, on_copy: object) -> ft.Contr
                                     format_number(package.stars), "LIKES", ft.Colors.PRIMARY
                                 ),
                                 _stat_badge(
-                                    format_number(package.downloads), "DOWNLOADS", ft.Colors.PRIMARY
+                                    format_number(package.downloads),
+                                    "DOWNLOADS",
+                                    ft.Colors.PRIMARY,
                                 ),
                             ],
                             spacing=16,
                         ),
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    wrap=True,
+                    run_spacing=4,
                 ),
                 ft.Text(
                     truncate(package.description, 200),
@@ -93,7 +117,9 @@ def PackageCard(package: Package, on_click: object, on_copy: object) -> ft.Contr
                                     color=ft.Colors.ON_SURFACE_VARIANT,
                                 ),
                                 ft.Text(
-                                    package.publisher, size=12, color=ft.Colors.ON_SURFACE_VARIANT
+                                    package.publisher,
+                                    size=12,
+                                    color=ft.Colors.ON_SURFACE_VARIANT,
                                 ),
                             ],
                             spacing=4,
@@ -115,6 +141,8 @@ def PackageCard(package: Package, on_click: object, on_copy: object) -> ft.Contr
                         else ft.Container(),
                     ],
                     spacing=12,
+                    wrap=True,
+                    run_spacing=4,
                 ),
             ],
             spacing=8,
@@ -122,8 +150,17 @@ def PackageCard(package: Package, on_click: object, on_copy: object) -> ft.Contr
         padding=20,
         border_radius=8,
         bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
-        on_click=handle_click,
-        ink=True,
+        shadow=_CARD_SHADOW,
+        border=_NEON_BORDER if hovered else _DEFAULT_BORDER,
+        animate=ft.Animation(200, ft.AnimationCurve.EASE_OUT),
+    )
+
+    return ft.GestureDetector(
+        content=card,
+        on_enter=lambda _: set_hovered(True),
+        on_exit=lambda _: set_hovered(False),
+        on_tap=handle_click,
+        mouse_cursor=ft.MouseCursor.CLICK,
     )
 
 
@@ -140,7 +177,9 @@ def _stat_badge(value: str, label: str, color: str) -> ft.Control:
 
 @ft.component
 def PackageCardSmall(package: Package, on_click: object) -> ft.Control:
-    def handle_click(_e: ft.ControlEvent) -> None:
+    hovered, set_hovered = ft.use_state(False)
+
+    def handle_click(_e) -> None:
         if on_click:
             on_click(package)
 
@@ -160,7 +199,7 @@ def PackageCardSmall(package: Package, on_click: object) -> ft.Control:
         else ft.Container()
     )
 
-    return ft.Container(
+    card = ft.Container(
         content=ft.Column(
             controls=[
                 ft.Text(
@@ -187,7 +226,9 @@ def PackageCardSmall(package: Package, on_click: object) -> ft.Control:
                             controls=[
                                 ft.Icon(ft.Icons.STAR, size=14, color=ft.Colors.PRIMARY),
                                 ft.Text(
-                                    format_number(package.stars), size=12, color=ft.Colors.PRIMARY
+                                    format_number(package.stars),
+                                    size=12,
+                                    color=ft.Colors.PRIMARY,
                                 ),
                             ],
                             spacing=4,
@@ -213,12 +254,15 @@ def PackageCardSmall(package: Package, on_click: object) -> ft.Control:
         padding=16,
         border_radius=8,
         bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
-        border=ft.Border(
-            left=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
-            top=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
-            right=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
-            bottom=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
-        ),
-        on_click=handle_click,
-        ink=True,
+        shadow=_CARD_SHADOW,
+        border=_NEON_BORDER if hovered else _DEFAULT_BORDER,
+        animate=ft.Animation(200, ft.AnimationCurve.EASE_OUT),
+    )
+
+    return ft.GestureDetector(
+        content=card,
+        on_enter=lambda _: set_hovered(True),
+        on_exit=lambda _: set_hovered(False),
+        on_tap=handle_click,
+        mouse_cursor=ft.MouseCursor.CLICK,
     )
