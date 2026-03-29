@@ -41,6 +41,7 @@ async def search_packages(
             package_type=state.filter_type,
             official_only=state.filter_official,
             pypi_only=pypi_only,
+            categories=state.filter_categories or None,
         )
         state.packages = packages
         state.total_count = total

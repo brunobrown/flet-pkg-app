@@ -73,6 +73,8 @@ UI_CONTROL_KEYWORDS = [
     "color picker",
 ]
 
+CATEGORIES = {gui = ["gui", "ui", "flet-gui", "interface", "flet-ui"], mobile = ["mobile", "android", "ios"], desktop = ["desktop", "desktop-app", "cross-platform"], web = ["web", "webapp", "fastapi", "flask"], devtools = ["flet-routing", "routing", "flet-architecture", "flet-design-pattern", "devtools"], database = ["sqlite", "database", "firebase", "supabase"], media = ["music-player", "audio", "video", "camera", "lottie", "rive"]}
+
 [development]
 
 [homologation]

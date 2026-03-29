@@ -1,7 +1,7 @@
 """Centralized route definitions, parsing, and URL building."""
 
 import urllib.parse
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 # --- Route constants ---
 ROUTE_HOME = "/"
@@ -27,6 +27,7 @@ class ParsedRoute:
     sort: str = "default ranking"
     filter_type: str | None = None
     official: bool = False
+    categories: list[str] = field(default_factory=list)
     page_num: int = 1
 
 
@@ -43,12 +44,15 @@ def parse_route(route: str) -> ParsedRoute:
         return ParsedRoute(page="guide")
 
     if path == "packages":
+        cat_str = params.get("cat", "")
+        categories = [c for c in cat_str.split(",") if c] if cat_str else []
         return ParsedRoute(
             page="packages",
             query=params.get("q", ""),
             sort=params.get("sort", "default ranking"),
             filter_type=TYPE_URL_TO_DOMAIN.get(params.get("type", "")),
             official=params.get("official", "") == "true",
+            categories=categories,
             page_num=int(params.get("page", "1")),
         )
 
@@ -66,6 +70,7 @@ def build_packages_url(
     sort: str = "default ranking",
     filter_type: str | None = None,
     official: bool = False,
+    categories: list[str] | None = None,
     page_num: int = 1,
 ) -> str:
     """Build /packages URL from explicit params."""
@@ -78,6 +83,8 @@ def build_packages_url(
         type_key = TYPE_DOMAIN_TO_URL.get(filter_type, "")
         if type_key:
             qparams["type"] = type_key
+    if categories:
+        qparams["cat"] = ",".join(categories)
     if official:
         qparams["official"] = "true"
     if page_num > 1:

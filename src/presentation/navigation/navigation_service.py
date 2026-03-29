@@ -48,6 +48,7 @@ class NavigationService:
         sort: str = "default ranking",
         filter_type: str | None = None,
         official: bool = False,
+        categories: list[str] | None = None,
         page_num: int = 1,
     ) -> str:
         """Build packages URL from params, mark as handled, and push.
@@ -59,6 +60,7 @@ class NavigationService:
             sort=sort,
             filter_type=filter_type,
             official=official,
+            categories=categories,
             page_num=page_num,
         )
         self._last_handled_route = url

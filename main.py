@@ -80,12 +80,14 @@ def main(page: ft.Page) -> None:
         sort: str = "default ranking",
         filter_type: str | None = None,
         official: bool = False,
+        categories: list[str] | None = None,
         page_num: int = 1,
     ) -> None:
         pkg_state.search_query = query
         pkg_state.sort_by = sort
         pkg_state.filter_type = filter_type
         pkg_state.filter_official = official
+        pkg_state.filter_categories = categories or []
         pkg_state.page_number = page_num
         app_state.current_page = "packages"
         await search_packages(pkg_state, api, query, page_num, pypi_only=app_state.show_pypi_only)
@@ -102,7 +104,9 @@ def main(page: ft.Page) -> None:
         elif r.page == "guide":
             app_state.current_page = "guide"
         elif r.page == "packages":
-            page.run_task(_load_search, r.query, r.sort, r.filter_type, r.official, r.page_num)
+            page.run_task(
+                _load_search, r.query, r.sort, r.filter_type, r.official, r.categories, r.page_num
+            )
         elif r.page == "detail":
             page.run_task(_load_detail, r.package_name)
         else:
@@ -124,6 +128,7 @@ def main(page: ft.Page) -> None:
                 pkg_state.sort_by,
                 pkg_state.filter_type,
                 pkg_state.filter_official,
+                pkg_state.filter_categories or None,
                 pkg_state.page_number,
             )
         else:
@@ -139,6 +144,7 @@ def main(page: ft.Page) -> None:
             sort=pkg_state.sort_by,
             filter_type=pkg_state.filter_type,
             official=pkg_state.filter_official,
+            categories=pkg_state.filter_categories or None,
             page_num=pkg_state.page_number,
         )
         page.run_task(
@@ -147,6 +153,7 @@ def main(page: ft.Page) -> None:
             pkg_state.sort_by,
             pkg_state.filter_type,
             pkg_state.filter_official,
+            pkg_state.filter_categories or None,
             pkg_state.page_number,
         )
 

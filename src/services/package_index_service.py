@@ -203,6 +203,7 @@ class PackageIndexService:
         package_type: str | None = None,
         official_only: bool = False,
         pypi_only: bool = True,
+        categories: list[str] | None = None,
         page: int = 1,
         per_page: int = 10,
     ) -> tuple[list[Package], int]:
@@ -224,6 +225,15 @@ class PackageIndexService:
             result = [p for p in result if p.package_type == PackageType.UI_CONTROL]
         elif package_type == "Python Package":
             result = [p for p in result if p.package_type == PackageType.PYTHON_PACKAGE]
+
+        # Filter: categories (match any topic in the category's topic list)
+        if categories:
+            cat_topics: set[str] = set()
+            categories_map = settings.get("CATEGORIES", {})
+            for cat in categories:
+                cat_topics.update(categories_map.get(cat, []))
+            if cat_topics:
+                result = [p for p in result if any(t.lower() in cat_topics for t in p.topics)]
 
         # Filter: text search
         if text:

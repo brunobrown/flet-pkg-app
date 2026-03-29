@@ -69,6 +69,7 @@ class PackageRepositoryImpl(PackageRepository):
         package_type: str | None = None,
         official_only: bool = False,
         pypi_only: bool = True,
+        categories: list[str] | None = None,
     ) -> tuple[list[Package], int]:
         await self._index.wait_until_ready()
         return self._index.query(
@@ -77,6 +78,7 @@ class PackageRepositoryImpl(PackageRepository):
             package_type=package_type,
             official_only=official_only,
             pypi_only=pypi_only,
+            categories=categories,
             page=page,
             per_page=per_page,
         )

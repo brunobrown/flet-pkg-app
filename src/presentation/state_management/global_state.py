@@ -22,6 +22,7 @@ class PackagesState:
     sort_by: str = "default ranking"
     filter_type: str | None = None
     filter_official: bool = False
+    filter_categories: list[str] = field(default_factory=list)
     is_loading: bool = False
     error: str = ""
 

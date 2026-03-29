@@ -15,6 +15,7 @@ class SearchPackagesUseCase:
         package_type: str | None = None,
         official_only: bool = False,
         pypi_only: bool = True,
+        categories: list[str] | None = None,
     ) -> tuple[list[Package], int]:
         return await self._repository.search_packages(
             query=query,
@@ -24,4 +25,5 @@ class SearchPackagesUseCase:
             package_type=package_type,
             official_only=official_only,
             pypi_only=pypi_only,
+            categories=categories,
         )

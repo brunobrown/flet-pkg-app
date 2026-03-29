@@ -14,6 +14,7 @@ class PackageRepository(ABC):
         package_type: str | None = None,
         official_only: bool = False,
         pypi_only: bool = True,
+        categories: list[str] | None = None,
     ) -> tuple[list[Package], int]:
         """Search packages. Returns (packages, total_count)."""
 

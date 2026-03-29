@@ -30,6 +30,7 @@ def PackagesPage(
     filter_ui = state.filter_type == "UI Controls"
     filter_services = state.filter_type == "Services"
     filter_official = state.filter_official
+    filter_categories = state.filter_categories
 
     # --- Handlers that update state and re-search ---
     def handle_page_change(page_num: int) -> None:
@@ -64,6 +65,16 @@ def PackagesPage(
 
     def handle_filter_official(value: bool) -> None:
         state.filter_official = value
+        state.page_number = 1
+        ctx.reload_packages()
+
+    def handle_toggle_category(cat_key: str) -> None:
+        cats = list(state.filter_categories)
+        if cat_key in cats:
+            cats.remove(cat_key)
+        else:
+            cats.append(cat_key)
+        state.filter_categories = cats
         state.page_number = 1
         ctx.reload_packages()
 
@@ -116,9 +127,11 @@ def PackagesPage(
                 filter_ui=filter_ui,
                 filter_services=filter_services,
                 filter_official=filter_official,
+                filter_categories=filter_categories,
                 on_filter_ui=handle_filter_ui,
                 on_filter_services=handle_filter_services,
                 on_filter_official=handle_filter_official,
+                on_toggle_category=handle_toggle_category,
             ),
         ],
         spacing=8,
