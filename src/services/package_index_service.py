@@ -114,7 +114,12 @@ class PackageIndexService:
             return 0
 
     async def _enrich_downloads(self, packages: list[Package]) -> None:
-        names = [p.pypi_name or p.name for p in packages]
+        """Enrich packages with download counts.
+
+        Uses ClickHouse batch query (same BigQuery source as pepy.tech, fast, no rate limit).
+        """
+        pypi_pkgs = [p for p in packages if p.pypi_name]
+        names = [p.pypi_name for p in pypi_pkgs]
         result: dict[str, int] = {}
         uncached: list[str] = []
 
@@ -135,9 +140,8 @@ class PackageIndexService:
             except Exception:
                 logger.info("ClickHouse unavailable for index enrichment")
 
-        for pkg in packages:
-            key = pkg.pypi_name or pkg.name
-            pkg.downloads = result.get(key, pkg.downloads)
+        for pkg in pypi_pkgs:
+            pkg.downloads = result.get(pkg.pypi_name, pkg.downloads)
 
     async def _verify_pypi_and_enrich(self, packages: list[Package]) -> None:
         """Verify PyPI existence for each package. Fill version if found.
