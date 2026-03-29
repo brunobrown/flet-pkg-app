@@ -17,7 +17,7 @@ class PackagesState:
     packages: list[Package] = field(default_factory=list)
     total_count: int = 0
     page_number: int = 1
-    per_page: int = 10
+    per_page: int = 12
     search_query: str = ""
     sort_by: str = "default ranking"
     filter_type: str | None = None

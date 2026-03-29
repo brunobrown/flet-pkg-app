@@ -66,7 +66,8 @@ def SkeletonCard() -> ft.Control:
             ],
             spacing=12,
         ),
-        padding=20,
+        height=180,
+        padding=16,
         border_radius=8,
         bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
         opacity=opacity,
@@ -77,14 +78,19 @@ def SkeletonCard() -> ft.Control:
 
 @ft.component
 def SkeletonCardList(count: int = 10) -> ft.Control:
-    """List of skeleton cards for loading state."""
-    return ft.Column(
+    """Grid of skeleton cards for loading state."""
+    return ft.ResponsiveRow(
         controls=[
             ft.Container(
                 content=SkeletonCard(),
-                margin=ft.Margin(left=0, top=0, right=0, bottom=10),
+                col={
+                    ft.ResponsiveRowBreakpoint.XS: 12,
+                    ft.ResponsiveRowBreakpoint.SM: 6,
+                    ft.ResponsiveRowBreakpoint.LG: 4,
+                },
             )
             for _ in range(count)
         ],
-        spacing=0,
+        spacing=10,
+        run_spacing=10,
     )

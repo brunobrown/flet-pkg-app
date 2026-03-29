@@ -266,3 +266,119 @@ def PackageCardSmall(package: Package, on_click: object) -> ft.Control:
         on_tap=handle_click,
         mouse_cursor=ft.MouseCursor.CLICK,
     )
+
+
+@ft.component
+def PackageCardGrid(package: Package, on_click: object, on_copy: object) -> ft.Control:
+    """Intermediate card for grid layout — more info than Small, more compact than full."""
+    hovered, set_hovered = ft.use_state(False)
+
+    def handle_copy(_e) -> None:
+        if on_copy:
+            on_copy(package.pip_install_command)
+
+    def handle_click(_e) -> None:
+        if on_click:
+            on_click(package)
+
+    card = ft.Container(
+        content=ft.Column(
+            controls=[
+                ft.Row(
+                    controls=[
+                        ft.Text(
+                            package.name,
+                            size=16,
+                            weight=ft.FontWeight.BOLD,
+                            color=ft.Colors.PRIMARY,
+                            max_lines=1,
+                            overflow=ft.TextOverflow.ELLIPSIS,
+                            expand=True,
+                        ),
+                        ft.IconButton(
+                            icon=ft.Icons.COPY,
+                            icon_size=12,
+                            icon_color=ft.Colors.ON_SURFACE_VARIANT,
+                            tooltip=package.pip_install_command,
+                            on_click=handle_copy,
+                        ),
+                    ],
+                    spacing=0,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                ft.Text(
+                    truncate(package.description, 120),
+                    size=12,
+                    color=ft.Colors.ON_SURFACE,
+                    max_lines=2,
+                    overflow=ft.TextOverflow.ELLIPSIS,
+                ),
+                ft.Container(expand=True),
+                ft.Row(
+                    controls=[
+                        ft.Row(
+                            controls=[
+                                ft.Icon(ft.Icons.STAR, size=13, color=ft.Colors.PRIMARY),
+                                ft.Text(
+                                    format_number(package.stars),
+                                    size=12,
+                                    color=ft.Colors.PRIMARY,
+                                ),
+                            ],
+                            spacing=4,
+                        ),
+                        ft.Row(
+                            controls=[
+                                ft.Icon(ft.Icons.DOWNLOAD, size=13, color=ft.Colors.PRIMARY),
+                                ft.Text(
+                                    format_number(package.downloads),
+                                    size=12,
+                                    color=ft.Colors.PRIMARY,
+                                ),
+                            ],
+                            spacing=4,
+                        ),
+                    ],
+                    spacing=16,
+                ),
+                ft.Row(
+                    controls=[
+                        ft.Text(
+                            f"v{package.version}" if package.version else "",
+                            size=11,
+                            color=ft.Colors.ON_SURFACE_VARIANT,
+                        ),
+                        ft.Text(
+                            format_date(package.updated_at) if package.updated_at else "",
+                            size=11,
+                            color=ft.Colors.ON_SURFACE_VARIANT,
+                        ),
+                        ft.Text(
+                            package.publisher or package.github_owner or "",
+                            size=11,
+                            color=ft.Colors.ON_SURFACE_VARIANT,
+                        ),
+                    ],
+                    spacing=8,
+                    wrap=True,
+                    run_spacing=2,
+                ),
+            ],
+            spacing=6,
+        ),
+        height=180,
+        padding=16,
+        border_radius=8,
+        bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
+        shadow=_CARD_SHADOW,
+        border=_NEON_BORDER if hovered else _DEFAULT_BORDER,
+        animate=ft.Animation(200, ft.AnimationCurve.EASE_OUT),
+    )
+
+    return ft.GestureDetector(
+        content=card,
+        on_enter=lambda _: set_hovered(True),
+        on_exit=lambda _: set_hovered(False),
+        on_tap=handle_click,
+        mouse_cursor=ft.MouseCursor.CLICK,
+    )

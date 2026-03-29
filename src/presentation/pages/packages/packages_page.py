@@ -5,7 +5,7 @@ import flet as ft
 from config import settings
 from src.presentation.components.common.footer import AppFooter
 from src.presentation.components.common.loading import ErrorMessage
-from src.presentation.components.common.package_card import PackageCard
+from src.presentation.components.common.package_card import PackageCardGrid
 from src.presentation.components.common.pagination import Pagination
 from src.presentation.components.common.skeleton_card import SkeletonCardList
 from src.presentation.components.sections.sidebar_filters import SidebarFilters
@@ -95,13 +95,19 @@ def PackagesPage(
             )
         )
     else:
+        grid_cards = []
         for pkg in state.packages:
-            package_list.append(
+            grid_cards.append(
                 ft.Container(
-                    content=PackageCard(pkg, on_click=on_package_click, on_copy=on_copy),
-                    margin=ft.Margin(left=0, top=0, right=0, bottom=10),
+                    content=PackageCardGrid(pkg, on_click=on_package_click, on_copy=on_copy),
+                    col={
+                        ft.ResponsiveRowBreakpoint.XS: 12,
+                        ft.ResponsiveRowBreakpoint.SM: 6,
+                        ft.ResponsiveRowBreakpoint.LG: 4,
+                    },
                 )
             )
+        package_list.append(ft.ResponsiveRow(controls=grid_cards, spacing=10, run_spacing=10))
 
     sort_items = [ft.DropdownOption(text=s, key=s) for s in settings.SORT_OPTIONS]
 
