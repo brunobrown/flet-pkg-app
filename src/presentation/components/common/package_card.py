@@ -284,6 +284,28 @@ def PackageCardSmall(package: Package, on_click: object) -> ft.Control:
 
 
 @ft.component
+def _TopicTag(topic: str, on_search: object = None) -> ft.Control:
+    """Clickable hashtag with hover effect (underline + pink)."""
+    hovered, set_hovered = ft.use_state(False)
+
+    decoration = ft.TextDecoration.UNDERLINE if hovered else ft.TextDecoration.NONE
+    text_color = FLET_PINK if hovered else ft.Colors.PRIMARY
+
+    return ft.GestureDetector(
+        content=ft.Text(
+            f"#{topic}",
+            size=11,
+            color=text_color,
+            style=ft.TextStyle(decoration=decoration, decoration_color=FLET_PINK),
+        ),
+        on_enter=lambda _: set_hovered(True),
+        on_exit=lambda _: set_hovered(False),
+        on_tap=lambda _: on_search(f"topic:{topic}") if on_search else None,
+        mouse_cursor=ft.MouseCursor.CLICK,
+    )
+
+
+@ft.component
 def PackageCardGrid(
     package: Package, on_click: object, on_copy: object, on_search: object = None
 ) -> ft.Control:
@@ -299,20 +321,11 @@ def PackageCardGrid(
             on_click(package)
 
     # Clickable hashtag topics (max 3 to save space)
+    visible_topics = [
+        t for t in package.topics[:6] if t.lower() not in ("flet", "python", "python3", "flet-dev")
+    ][:3]
     topics_row = ft.Row(
-        controls=[
-            ft.GestureDetector(
-                content=ft.Text(
-                    f"#{t}",
-                    size=11,
-                    color=ft.Colors.PRIMARY,
-                ),
-                on_tap=lambda _, topic=t: on_search(f"topic:{topic}") if on_search else None,
-                mouse_cursor=ft.MouseCursor.CLICK,
-            )
-            for t in package.topics[:3]
-            if t.lower() not in ("flet", "python", "python3", "flet-dev")
-        ],
+        controls=[_TopicTag(topic=t, on_search=on_search) for t in visible_topics],
         spacing=8,
         wrap=True,
         run_spacing=2,
