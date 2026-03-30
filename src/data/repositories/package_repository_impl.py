@@ -205,23 +205,33 @@ class PackageRepositoryImpl(PackageRepository):
             except Exception:
                 pass
         elif pkg.github_owner and pkg.github_repo:
-            try:
-                readme, changelog = await asyncio.gather(
-                    self._github.get_readme(pkg.github_owner, pkg.github_repo),
-                    self._github.get_file_content(
-                        pkg.github_owner, pkg.github_repo, "CHANGELOG.md"
-                    ),
-                )
-                pkg.readme = readme
-                pkg.changelog = changelog
-                repo_data = await self._github.get_repository(pkg.github_owner, pkg.github_repo)
-                pkg.stars = repo_data.get("stargazers_count", 0)
-                pkg.forks = repo_data.get("forks_count", 0)
-                pkg.topics = repo_data.get("topics", [])
-                if not pkg.issues_url:
-                    full_name = repo_data.get("full_name", "")
-                    pkg.issues_url = f"https://github.com/{full_name}/issues"
-            except Exception:
+            # Use github_owner as publisher (always correct for profile URL)
+            pkg.publisher = pkg.github_owner
+            # Try github_repo first, then package_name as fallback
+            # (PyPI URLs may use underscores while GitHub uses hyphens)
+            repo_names = [pkg.github_repo]
+            if package_name != pkg.github_repo:
+                repo_names.append(package_name)
+            for repo_name in repo_names:
+                try:
+                    readme, changelog = await asyncio.gather(
+                        self._github.get_readme(pkg.github_owner, repo_name),
+                        self._github.get_file_content(pkg.github_owner, repo_name, "CHANGELOG.md"),
+                    )
+                    pkg.readme = readme
+                    pkg.changelog = changelog
+                    repo_data = await self._github.get_repository(pkg.github_owner, repo_name)
+                    pkg.stars = repo_data.get("stargazers_count", 0)
+                    pkg.forks = repo_data.get("forks_count", 0)
+                    pkg.topics = repo_data.get("topics", [])
+                    pkg.github_repo = repo_name
+                    if not pkg.issues_url:
+                        full_name = repo_data.get("full_name", "")
+                        pkg.issues_url = f"https://github.com/{full_name}/issues"
+                    break
+                except Exception:
+                    continue
+            else:
                 logger.info("No GitHub data for %s", package_name)
 
         if is_official:

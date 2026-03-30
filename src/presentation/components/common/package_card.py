@@ -6,6 +6,51 @@ from src.domain.entities.package import Package
 from src.presentation.themes.colors import FLET_PINK
 from src.utils.formatters import format_date, format_number, truncate
 
+
+def _github_profile_url(name: str) -> str:
+    """Map publisher name to GitHub profile URL."""
+    if name == "flet.dev":
+        return "https://github.com/flet-dev"
+    return f"https://github.com/{name}"
+
+
+@ft.component
+def _publisher_link(name: str, size: int = 11) -> ft.Control:
+    """Clickable publisher name that opens GitHub profile. Underline on hover."""
+    if not name:
+        return ft.Container()
+
+    hovered, set_hovered = ft.use_state(False)
+
+    def _open_profile(e) -> None:
+        e.page.run_task(ft.UrlLauncher().launch_url, _github_profile_url(name))
+
+    decoration = ft.TextDecoration.UNDERLINE if hovered else ft.TextDecoration.NONE
+    text_color = FLET_PINK if hovered else ft.Colors.PRIMARY
+
+    return ft.GestureDetector(
+        content=ft.Row(
+            controls=[
+                ft.Icon(ft.Icons.VERIFIED, size=size, color=ft.Colors.ON_SURFACE_VARIANT),
+                ft.Text(
+                    name,
+                    size=size,
+                    color=text_color,
+                    style=ft.TextStyle(
+                        decoration=decoration,
+                        decoration_color=FLET_PINK,
+                    ),
+                ),
+            ],
+            spacing=4,
+        ),
+        on_enter=lambda _: set_hovered(True),
+        on_exit=lambda _: set_hovered(False),
+        on_tap=_open_profile,
+        mouse_cursor=ft.MouseCursor.CLICK,
+    )
+
+
 _CARD_SHADOW = ft.BoxShadow(
     spread_radius=0,
     blur_radius=8,
@@ -109,23 +154,7 @@ def PackageCard(package: Package, on_click: object, on_copy: object) -> ft.Contr
                             size=12,
                             color=ft.Colors.ON_SURFACE_VARIANT,
                         ),
-                        ft.Row(
-                            controls=[
-                                ft.Icon(
-                                    ft.Icons.VERIFIED_USER,
-                                    size=12,
-                                    color=ft.Colors.ON_SURFACE_VARIANT,
-                                ),
-                                ft.Text(
-                                    package.publisher,
-                                    size=12,
-                                    color=ft.Colors.ON_SURFACE_VARIANT,
-                                ),
-                            ],
-                            spacing=4,
-                        )
-                        if package.publisher
-                        else ft.Container(),
+                        _publisher_link(package.publisher, size=12),
                         ft.Row(
                             controls=[
                                 ft.Icon(
@@ -183,21 +212,7 @@ def PackageCardSmall(package: Package, on_click: object) -> ft.Control:
         if on_click:
             on_click(package)
 
-    publisher_row = (
-        ft.Row(
-            controls=[
-                ft.Icon(ft.Icons.VERIFIED, size=12, color=ft.Colors.ON_SURFACE_VARIANT),
-                ft.Text(
-                    package.publisher or package.github_owner,
-                    size=11,
-                    color=ft.Colors.PRIMARY,
-                ),
-            ],
-            spacing=4,
-        )
-        if (package.publisher or package.github_owner)
-        else ft.Container()
-    )
+    publisher_row = _publisher_link(package.publisher or package.github_owner)
 
     card = ft.Container(
         content=ft.Column(
@@ -353,11 +368,7 @@ def PackageCardGrid(package: Package, on_click: object, on_copy: object) -> ft.C
                             size=11,
                             color=ft.Colors.ON_SURFACE_VARIANT,
                         ),
-                        ft.Text(
-                            package.publisher or package.github_owner or "",
-                            size=11,
-                            color=ft.Colors.ON_SURFACE_VARIANT,
-                        ),
+                        _publisher_link(package.publisher or package.github_owner),
                     ],
                     spacing=8,
                     wrap=True,

@@ -162,6 +162,14 @@ def PackageDetailPage(
                     if pkg.repository_url
                     else ft.Container(),
                     ft.TextButton(
+                        "PyPI",
+                        icon=ft.Icons.INVENTORY_2,
+                        url=f"https://pypi.org/project/{pkg.pypi_name}/",
+                        style=ft.ButtonStyle(color=ft.Colors.PRIMARY),
+                    )
+                    if pkg.pypi_name
+                    else ft.Container(),
+                    ft.TextButton(
                         "Issues",
                         icon=ft.Icons.BUG_REPORT,
                         url=pkg.issues_url,
@@ -354,11 +362,7 @@ def PackageDetailPage(
                                     size=13,
                                     color=ft.Colors.ON_SURFACE_VARIANT,
                                 ),
-                                ft.Text(
-                                    f"by {pkg.publisher}" if pkg.publisher else "",
-                                    size=13,
-                                    color=ft.Colors.ON_SURFACE_VARIANT,
-                                ),
+                                _publisher_link_detail(pkg.publisher or pkg.github_owner),
                             ],
                             spacing=16,
                         ),
@@ -482,7 +486,39 @@ def _like_button(pkg) -> ft.Control:
     )
 
 
-def _stat_row(icon: ft.Icons, label: str, value: str) -> ft.Control:
+@ft.component
+def _publisher_link_detail(name: str) -> ft.Control:
+    """Clickable publisher name for detail page. Underline on hover."""
+    if not name:
+        return ft.Container()
+
+    hovered, set_hovered = ft.use_state(False)
+
+    def _open(e) -> None:
+        gh_name = "flet-dev" if name == "flet.dev" else name
+        e.page.run_task(ft.UrlLauncher().launch_url, f"https://github.com/{gh_name}")
+
+    decoration = ft.TextDecoration.UNDERLINE if hovered else ft.TextDecoration.NONE
+    text_color = FLET_PINK if hovered else ft.Colors.PRIMARY
+
+    return ft.GestureDetector(
+        content=ft.Text(
+            f"by {name}",
+            size=13,
+            color=text_color,
+            style=ft.TextStyle(
+                decoration=decoration,
+                decoration_color=FLET_PINK,
+            ),
+        ),
+        on_enter=lambda _: set_hovered(True),
+        on_exit=lambda _: set_hovered(False),
+        on_tap=_open,
+        mouse_cursor=ft.MouseCursor.CLICK,
+    )
+
+
+def _stat_row(icon: ft.IconData, label: str, value: str) -> ft.Control:
     return ft.Row(
         controls=[
             ft.Icon(icon, size=16, color=ft.Colors.ON_SURFACE_VARIANT),
