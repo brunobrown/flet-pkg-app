@@ -235,17 +235,21 @@ class PackageIndexService:
             if cat_topics:
                 result = [p for p in result if any(t.lower() in cat_topics for t in p.topics)]
 
-        # Filter: text search
+        # Filter: text search (supports "topic:name" for exact topic match)
         if text:
-            text_lower = text.lower()
-            result = [
-                p
-                for p in result
-                if text_lower in p.name.lower()
-                or text_lower in (p.pypi_name or "").lower()
-                or text_lower in (p.description or "").lower()
-                or any(text_lower in t.lower() for t in p.topics)
-            ]
+            if text.lower().startswith("topic:"):
+                topic_name = text[6:].strip().lower()
+                result = [p for p in result if topic_name in [t.lower() for t in p.topics]]
+            else:
+                text_lower = text.lower()
+                result = [
+                    p
+                    for p in result
+                    if text_lower in p.name.lower()
+                    or text_lower in (p.pypi_name or "").lower()
+                    or text_lower in (p.description or "").lower()
+                    or any(text_lower in t.lower() for t in p.topics)
+                ]
 
         # Sort
         if sort == "most downloads":

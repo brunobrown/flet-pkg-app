@@ -99,7 +99,12 @@ def PackagesPage(
         for pkg in state.packages:
             grid_cards.append(
                 ft.Container(
-                    content=PackageCardGrid(pkg, on_click=on_package_click, on_copy=on_copy),
+                    content=PackageCardGrid(
+                        pkg,
+                        on_click=on_package_click,
+                        on_copy=on_copy,
+                        on_search=ctx.search,
+                    ),
                     col={
                         ft.ResponsiveRowBreakpoint.XS: 12,
                         ft.ResponsiveRowBreakpoint.SM: 6,

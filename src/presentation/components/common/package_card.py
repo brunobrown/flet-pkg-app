@@ -284,8 +284,10 @@ def PackageCardSmall(package: Package, on_click: object) -> ft.Control:
 
 
 @ft.component
-def PackageCardGrid(package: Package, on_click: object, on_copy: object) -> ft.Control:
-    """Intermediate card for grid layout — more info than Small, more compact than full."""
+def PackageCardGrid(
+    package: Package, on_click: object, on_copy: object, on_search: object = None
+) -> ft.Control:
+    """Intermediate card for grid layout with clickable hashtags."""
     hovered, set_hovered = ft.use_state(False)
 
     def handle_copy(_e) -> None:
@@ -295,6 +297,26 @@ def PackageCardGrid(package: Package, on_click: object, on_copy: object) -> ft.C
     def handle_click(_e) -> None:
         if on_click:
             on_click(package)
+
+    # Clickable hashtag topics (max 3 to save space)
+    topics_row = ft.Row(
+        controls=[
+            ft.GestureDetector(
+                content=ft.Text(
+                    f"#{t}",
+                    size=11,
+                    color=ft.Colors.PRIMARY,
+                ),
+                on_tap=lambda _, topic=t: on_search(f"topic:{topic}") if on_search else None,
+                mouse_cursor=ft.MouseCursor.CLICK,
+            )
+            for t in package.topics[:3]
+            if t.lower() not in ("flet", "python", "python3", "flet-dev")
+        ],
+        spacing=8,
+        wrap=True,
+        run_spacing=2,
+    )
 
     card = ft.Container(
         content=ft.Column(
@@ -322,12 +344,13 @@ def PackageCardGrid(package: Package, on_click: object, on_copy: object) -> ft.C
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
                 ft.Text(
-                    truncate(package.description, 120),
+                    truncate(package.description, 100),
                     size=12,
                     color=ft.Colors.ON_SURFACE,
                     max_lines=2,
                     overflow=ft.TextOverflow.ELLIPSIS,
                 ),
+                topics_row if package.topics else ft.Container(),
                 ft.Container(expand=True),
                 ft.Row(
                     controls=[
@@ -377,7 +400,7 @@ def PackageCardGrid(package: Package, on_click: object, on_copy: object) -> ft.C
             ],
             spacing=6,
         ),
-        height=180,
+        height=200,
         padding=16,
         border_radius=8,
         bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
