@@ -40,6 +40,7 @@ def PackagesPage(
     def handle_per_page_change(value: int) -> None:
         state.per_page = value
         state.page_number = 1
+        ft.context.page.run_task(ft.SharedPreferences().set, "per_page", value)
         ctx.reload_packages()
 
     def handle_sort_change(sort_value: str) -> None:

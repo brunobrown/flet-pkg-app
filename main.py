@@ -59,7 +59,25 @@ def main(page: ft.Page) -> None:
     api = ApiService()
     pkg_state = app_state.packages
     nav = NavigationService(page)
+    prefs = ft.SharedPreferences()
 
+    # --- Load saved preferences ---
+    async def _load_preferences() -> None:
+        is_dark = await prefs.get("is_dark")
+        if is_dark is not None:
+            app_state.is_dark = bool(is_dark)
+            page.theme_mode = ft.ThemeMode.DARK if app_state.is_dark else ft.ThemeMode.LIGHT
+            page.update()
+
+        show_pypi_only = await prefs.get("show_pypi_only")
+        if show_pypi_only is not None:
+            app_state.show_pypi_only = bool(show_pypi_only)
+
+        per_page = await prefs.get("per_page")
+        if per_page is not None:
+            pkg_state.per_page = int(per_page)
+
+    page.run_task(_load_preferences)
     page.run_task(api.start_background_tasks)
 
     # --- Data loaders ---
@@ -118,9 +136,11 @@ def main(page: ft.Page) -> None:
 
     def handle_theme_toggle() -> None:
         toggle_theme_mode(page, app_state)
+        page.run_task(prefs.set, "is_dark", app_state.is_dark)
 
     def handle_pypi_filter_toggle() -> None:
         app_state.show_pypi_only = not app_state.show_pypi_only
+        page.run_task(prefs.set, "show_pypi_only", app_state.show_pypi_only)
         if app_state.current_page == "packages":
             page.run_task(
                 _load_search,
