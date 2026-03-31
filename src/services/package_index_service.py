@@ -249,6 +249,7 @@ class PackageIndexService:
                     or text_lower in (p.pypi_name or "").lower()
                     or text_lower in (p.description or "").lower()
                     or any(text_lower in t.lower() for t in p.topics)
+                    or any(text_lower in k.lower() for k in p.keywords)
                 ]
 
         # Sort

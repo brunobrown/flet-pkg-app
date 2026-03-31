@@ -248,13 +248,13 @@ def PackageDetailPage(
                 ft.Icon(
                     ft.Icons.CHEVRON_LEFT if sidebar_open else ft.Icons.CHEVRON_RIGHT,
                     size=18,
-                    color=ft.Colors.ON_PRIMARY,
+                    color=ft.Colors.WHITE,
                 ),
                 ft.RotatedBox(
                     content=ft.Text(
                         "Info",
                         size=14,
-                        color=ft.Colors.ON_PRIMARY,
+                        color=ft.Colors.WHITE,
                         weight=ft.FontWeight.W_500,
                     ),
                     quarter_turns=1,

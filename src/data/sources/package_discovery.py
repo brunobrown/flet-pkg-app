@@ -180,6 +180,8 @@ class PackageDiscovery:
                 related = True
             elif "flet" in (info.get("summary") or "").lower():
                 related = True
+            elif "flet" in [k.strip().lower() for k in (info.get("keywords") or "").split(",")]:
+                related = True
             self._cache.set(cache_key, related, ttl=86400)
             return related
         except Exception:

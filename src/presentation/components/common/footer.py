@@ -12,11 +12,6 @@ def AppFooter() -> ft.Control:
                 ft.Container(
                     content=ft.Row(
                         controls=[
-                            ft.Text(
-                                "Flet PKG",
-                                size=12,
-                                color=ft.Colors.ON_SURFACE_VARIANT,
-                            ),
                             ft.Container(width=16),
                             ft.IconButton(
                                 icon=ft.Icons.CHAT_BUBBLE_OUTLINE,

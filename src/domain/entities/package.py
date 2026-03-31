@@ -31,6 +31,7 @@ class Package:
     homepage_url: str = ""
     issues_url: str = ""
     dependencies: list[str] = field(default_factory=list)
+    keywords: list[str] = field(default_factory=list)
     pypi_name: str = ""
     github_owner: str = ""
     github_repo: str = ""

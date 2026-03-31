@@ -1,36 +1,32 @@
-# import os
 from dynaconf import Dynaconf, Validator
 
-# Lista de variáveis de ambiente obrigatórias
+# Required configuration variables that must be defined before the app starts.
+# See: https://www.dynaconf.com/validation/
 required_variables = [
     "GITHUB_TOKEN",
 ]
 
 settings = Dynaconf(
-    # Ativa múltiplos ambientes
+    # Enable environment-based configuration ([default], [development], [production], etc.)
     environments=True,
-    # Indica se deve ou não carregar variáveis de ambiente de um arquivo '.env'
+    # Do not load from .env files — use settings.toml and .secrets.toml instead
     load_dotenv=False,
-    # Lista de arquivos de configuração a serem carregados, na ordem em que são especificados
+    # Configuration files loaded in order (later files override earlier ones)
     settings_files=["settings.toml", ".secrets.toml"],
-    # Prefixo usado para adicionar variáveis de ambiente
+    # Prefix for environment variable overrides (e.g. SET_VAR_DYNACONF_GITHUB_TOKEN=xxx)
     envvar_prefix="SET_VAR_DYNACONF",
-    # Nome da variável de ambiente que controla a troca entre os diferentes ambientes configurados
-    # env_switcher="DYNACONF_ENV_MODE", # Use ENV_FOR_DYNACONF do proprio dynaconf
     validators=[
         Validator(
             *required_variables,
             must_exist=True,
             messages={
                 "must_exist_true": (
-                    f"As variáveis {required_variables} são obrigatórias."
-                    " Defina em settings.toml ou .secrets.toml"
+                    f"Missing required configuration: {required_variables}. "
+                    "Define them in settings.toml (public config) or .secrets.toml "
+                    "(sensitive values like API tokens). "
+                    "See https://dynaconf.com for configuration details."
                 )
             },
         )
     ],
 )
-
-# os.environ['DYNACONF_ENV_MODE'] = 'production'
-# `envvar_prefix` = export envvars with `export DYNACONF_FOO=bar`.
-# `settings_files` = Load these files in the order.

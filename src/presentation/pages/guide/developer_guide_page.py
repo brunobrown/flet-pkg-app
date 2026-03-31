@@ -74,18 +74,16 @@ This is the strongest signal for automatic discovery.
 
 ### Topics
 
-Add these topics to your GitHub repository:
+Add the **`flet`** topic to your GitHub repository. This helps with discovery \
+for packages that are not yet on PyPI (GitHub-only mode).
 
-- **`flet`** — required for discovery
-- **`fletPackage`** — marks it as a reusable package
-- **`fletService`** — if your package is a Service extension
-- **`fletUIControl`** — if your package is a UI Control extension
-- **`fletExtension`** — general Flet extension
+You can also add descriptive topics like `audio`, `map`, `service`, `ui-control` \
+— these appear as clickable hashtags on your package card.
 
 ### Description
 
-Include keywords like **"flet"**, **"flet extension"**, **"flet service"** or \
-**"flet ui control"** in the repository description.
+Include the word **"flet"** in the repository description. This is used as a \
+signal for automatic discovery when the package name doesn't start with `flet-`.
 
 ### README.md
 
@@ -130,8 +128,14 @@ dependencies = [
 ]
 ```
 
-The `keywords` field helps with search ranking, and having `flet` in \
-`dependencies` confirms your package is a real Flet extension.
+**How discovery works:** Flet PKG detects your package if any of these are true:
+
+1. Package name starts with `flet-` (strongest signal)
+2. `flet` is in `dependencies` (confirms it's a real Flet package)
+3. `"flet"` appears in the `description`
+4. `"flet"` is in the `keywords` list
+
+The `keywords` field also improves search results on the platform.
 
 ---
 
@@ -152,14 +156,14 @@ description or repository topics.
 
 ## Checklist
 
-- [ ] Repository name starts with `flet-`
-- [ ] Topics include `flet` and `fletPackage`
-- [ ] Description mentions "flet"
+- [ ] Repository and package name starts with `flet-`
+- [ ] `flet` topic added to GitHub repository
+- [ ] Description mentions "flet" (GitHub and PyPI)
 - [ ] `README.md` with install instructions and examples
 - [ ] `CHANGELOG.md` up to date
 - [ ] Published on PyPI with `flet-` prefix
 - [ ] `flet` in `dependencies` of `pyproject.toml`
-- [ ] `keywords` field populated in `pyproject.toml`
+- [ ] `keywords` includes `"flet"` in `pyproject.toml`
 
 ---
 

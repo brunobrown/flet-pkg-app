@@ -94,4 +94,5 @@ def pypi_info_to_package(data: dict[str, Any], downloads: int = 0) -> Package:
         github_owner=github_owner,
         github_repo=github_repo,
         dependencies=[r.split(";")[0].split(" ")[0] for r in (info.get("requires_dist") or [])],
+        keywords=[k.strip() for k in (info.get("keywords") or "").split(",") if k.strip()],
     )
