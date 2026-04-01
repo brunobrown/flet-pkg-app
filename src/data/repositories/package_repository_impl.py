@@ -216,13 +216,13 @@ class PackageRepositoryImpl(PackageRepository):
                 repo_names.append(package_name)
             for repo_name in repo_names:
                 try:
-                    readme, changelog = await asyncio.gather(
+                    readme, changelog, repo_data = await asyncio.gather(
                         self._github.get_readme(pkg.github_owner, repo_name),
                         self._github.get_file_content(pkg.github_owner, repo_name, "CHANGELOG.md"),
+                        self._github.get_repository(pkg.github_owner, repo_name),
                     )
                     pkg.readme = readme
                     pkg.changelog = changelog
-                    repo_data = await self._github.get_repository(pkg.github_owner, repo_name)
                     pkg.stars = repo_data.get("stargazers_count", 0)
                     pkg.forks = repo_data.get("forks_count", 0)
                     pkg.topics = repo_data.get("topics", [])

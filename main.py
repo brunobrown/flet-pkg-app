@@ -216,7 +216,14 @@ def main(page: ft.Page) -> None:
 
     # --- Graceful shutdown ---
     def _on_disconnect(_e) -> None:
-        page.run_task(api.close)
+        try:
+            import asyncio
+
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(api.close())
+        except Exception:
+            logging.debug("Could not schedule api.close on disconnect")
 
     page.on_disconnect = _on_disconnect
 

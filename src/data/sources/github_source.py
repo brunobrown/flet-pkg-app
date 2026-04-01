@@ -20,7 +20,7 @@ class GitHubSource:
         self._client = httpx.AsyncClient(
             base_url=settings.GITHUB_API_BASE,
             headers=headers,
-            timeout=30.0,
+            timeout=10.0,
             limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
         )
 
