@@ -199,13 +199,9 @@ def PackagesPage(
     )
 
     toggle_wrapper = ft.Container(
-        content=ft.Column(
-            controls=[toggle_tab],
-            alignment=ft.MainAxisAlignment.CENTER,
-        ),
+        content=toggle_tab,
         right=260 if filters_open else 0,
-        top=0,
-        bottom=0,
+        top=200,
         animate_position=ft.Animation(300, ft.AnimationCurve.EASE_IN_OUT),
     )
 
@@ -304,7 +300,22 @@ def PackagesPage(
                 content=ft.Stack(
                     controls=[
                         ft.ListView(
-                            controls=package_list,
+                            scroll=ft.Scrollbar(
+                                thumb_visibility=True,
+                                interactive=True,
+                            ),
+                            controls=[
+                                *package_list,
+                                # Pagination + footer scroll with content
+                                Pagination(
+                                    current_page=state.page_number,
+                                    total_items=state.total_count,
+                                    per_page=state.per_page,
+                                    on_page_change=handle_page_change,
+                                    on_per_page_change=handle_per_page_change,
+                                ),
+                                AppFooter(),
+                            ],
                             padding=ft.Padding(left=20, top=0, right=20, bottom=0),
                         ),
                         # Slide-in filter panel
@@ -315,16 +326,6 @@ def PackagesPage(
                 ),
                 expand=True,
             ),
-            # Pagination (fixed)
-            Pagination(
-                current_page=state.page_number,
-                total_items=state.total_count,
-                per_page=state.per_page,
-                on_page_change=handle_page_change,
-                on_per_page_change=handle_per_page_change,
-            ),
-            # Footer (fixed at bottom)
-            AppFooter(),
         ],
         spacing=0,
         expand=True,

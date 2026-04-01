@@ -212,6 +212,10 @@ def DeveloperGuidePage() -> ft.Control:
             ),
             ft.Container(
                 content=ft.ListView(
+                    scroll=ft.Scrollbar(
+                        thumb_visibility=True,
+                        interactive=True,
+                    ),
                     controls=[
                         ft.Container(
                             content=ft.Markdown(
@@ -225,11 +229,11 @@ def DeveloperGuidePage() -> ft.Control:
                             ),
                             padding=ft.Padding(left=40, top=20, right=40, bottom=20),
                         ),
+                        AppFooter(),
                     ],
                 ),
                 expand=True,
             ),
-            AppFooter(),
         ],
         spacing=0,
         expand=True,

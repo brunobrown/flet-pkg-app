@@ -273,15 +273,10 @@ def PackageDetailPage(
         ink=True,
     )
 
-    # Wrap toggle in a column to center it vertically
     toggle_wrapper = ft.Container(
-        content=ft.Column(
-            controls=[toggle_tab],
-            alignment=ft.MainAxisAlignment.CENTER,
-        ),
+        content=toggle_tab,
         right=300 if sidebar_open else 0,
-        top=0,
-        bottom=0,
+        top=150,
         animate_position=ft.Animation(300, ft.AnimationCurve.EASE_IN_OUT),
     )
 
@@ -390,13 +385,18 @@ def PackageDetailPage(
             ft.Container(
                 content=ft.Stack(
                     controls=[
-                        # Main content (scrollable)
+                        # Main content (scrollable) + footer
                         ft.ListView(
+                            scroll=ft.Scrollbar(
+                                thumb_visibility=True,
+                                interactive=True,
+                            ),
                             controls=[
                                 ft.Container(
                                     content=tab_content,
                                     padding=ft.Padding(left=40, top=20, right=40, bottom=20),
                                 ),
+                                AppFooter(),
                             ],
                         ),
                         # Slide-in sidebar panel
@@ -407,8 +407,6 @@ def PackageDetailPage(
                 ),
                 expand=True,
             ),
-            # Footer always at bottom
-            AppFooter(),
         ],
         spacing=0,
         expand=True,
