@@ -439,7 +439,7 @@ def _like_button(pkg) -> ft.Control:
                             height=6,
                             bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
                             rotate=ft.Rotate(0.785),
-                            margin=ft.Margin(left=1, top=0, right=-4, bottom=4),
+                            margin=ft.Margin(left=0, top=0, right=0, bottom=2),
                         ),
                         ft.Container(
                             content=ft.Text(
