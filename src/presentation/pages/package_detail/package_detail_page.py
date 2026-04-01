@@ -9,6 +9,7 @@ from src.presentation.state_management.global_state import PackagesState, UserSt
 from src.presentation.themes.colors import FLET_PINK
 from src.services.api_service import ApiService
 from src.utils.formatters import format_date, format_number
+from src.utils.text import clean_readme
 
 
 @ft.component
@@ -71,7 +72,7 @@ def PackageDetailPage(
 
     # --- Tab content ---
     if active_tab == 1:
-        changelog_text = _clean_readme(pkg.changelog) if pkg.changelog else "No changelog available"
+        changelog_text = clean_readme(pkg.changelog) if pkg.changelog else "No changelog available"
         tab_content = ft.Markdown(
             value=changelog_text,
             selectable=True,
@@ -108,7 +109,7 @@ def PackageDetailPage(
             )
         tab_content = ft.Column(controls=doc_controls, spacing=12)
     else:
-        readme_text = _clean_readme(pkg.readme) if pkg.readme else "No README available"
+        readme_text = clean_readme(pkg.readme) if pkg.readme else "No README available"
         tab_content = ft.Markdown(
             value=readme_text,
             selectable=True,
@@ -412,18 +413,6 @@ def PackageDetailPage(
         spacing=0,
         expand=True,
     )
-
-
-def _clean_readme(text: str) -> str:
-    """Clean README for safe Markdown rendering."""
-    import re
-
-    text = re.sub(r">\s*\[!(NOTE|WARNING|TIP|IMPORTANT|CAUTION)]", "> **\\1:**", text)
-    text = re.sub(r"\[!\[[^\]]*\]\([^)]*\)\]\([^)]*\)", "", text)
-    text = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", text)
-    text = re.sub(r"<[^>]+>", "", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text.strip()
 
 
 def _sidebar_section(title: str, controls: list[ft.Control]) -> ft.Control:

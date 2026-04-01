@@ -6,7 +6,17 @@ class PackageType(Enum):
     UI_CONTROL = "UI Controls"
     SERVICE = "Services"
     PYTHON_PACKAGE = "Python Package"
-    OFFICIAL = "Official"
+
+
+class SortOption:
+    """Sort option constants — single source of truth."""
+
+    DEFAULT = "default ranking"
+    MOST_STARS = "most stars"
+    MOST_DOWNLOADS = "most downloads"
+    RECENTLY_UPDATED = "recently updated"
+    NEWEST = "newest package"
+    TRENDING = "trending"
 
 
 @dataclass
@@ -43,16 +53,12 @@ class Package:
 
     @property
     def display_stars(self) -> str:
-        if self.stars >= 1_000_000:
-            return f"{self.stars / 1_000_000:.1f}M"
-        if self.stars >= 1_000:
-            return f"{self.stars / 1_000:.1f}k"
-        return str(self.stars)
+        from src.utils.formatters import format_number
+
+        return format_number(self.stars)
 
     @property
     def display_downloads(self) -> str:
-        if self.downloads >= 1_000_000:
-            return f"{self.downloads / 1_000_000:.2f}M"
-        if self.downloads >= 1_000:
-            return f"{self.downloads / 1_000:.1f}k"
-        return str(self.downloads)
+        from src.utils.formatters import format_number
+
+        return format_number(self.downloads)

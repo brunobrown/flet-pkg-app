@@ -9,9 +9,10 @@ import asyncio
 from config import settings
 from src.core.logger import get_logger
 from src.data.sources.clickhouse_source import ClickHouseSource
+from src.data.sources.github_source import GitHubSource
 from src.data.sources.package_discovery import PackageDiscovery
 from src.data.sources.pypi_source import PyPISource
-from src.domain.entities.package import Package, PackageType
+from src.domain.entities.package import Package, PackageType, SortOption
 from src.services.cache_service import CacheService
 
 logger = get_logger(__name__)
@@ -28,11 +29,13 @@ class PackageIndexService:
     def __init__(
         self,
         discovery: PackageDiscovery,
+        github: GitHubSource,
         pypi: PyPISource,
         clickhouse: ClickHouseSource,
         cache: CacheService,
     ):
         self._discovery = discovery
+        self._github = github
         self._pypi = pypi
         self._ch = clickhouse
         self._cache = cache
@@ -105,7 +108,7 @@ class PackageIndexService:
         if cached is not None:
             return cached
         try:
-            gh = self._discovery._github
+            gh = self._github
             repo = await gh.get_repository("flet-dev", "flet")
             stars = repo.get("stargazers_count", 0)
             self._cache.set("flet_repo_stars", stars, ttl=3600)
@@ -199,7 +202,7 @@ class PackageIndexService:
     def query(
         self,
         text: str = "",
-        sort: str = "default ranking",
+        sort: str = SortOption.DEFAULT,
         package_type: str | None = None,
         official_only: bool = False,
         pypi_only: bool = True,
@@ -253,17 +256,17 @@ class PackageIndexService:
                 ]
 
         # Sort
-        if sort == "most downloads":
+        if sort == SortOption.MOST_DOWNLOADS:
             result = sorted(result, key=lambda p: p.downloads, reverse=True)
-        elif sort == "most stars":
+        elif sort == SortOption.MOST_STARS:
             result = sorted(result, key=lambda p: p.stars, reverse=True)
-        elif sort == "trending":
+        elif sort == SortOption.TRENDING:
             result = sorted(result, key=lambda p: p.stars + p.downloads, reverse=True)
-        elif sort == "recently updated":
+        elif sort == SortOption.RECENTLY_UPDATED:
             result = sorted(result, key=lambda p: p.updated_at or "", reverse=True)
-        elif sort == "newest package":
+        elif sort == SortOption.NEWEST:
             result = sorted(result, key=lambda p: p.created_at or "", reverse=True)
-        # "default ranking" keeps the original order (by stars)
+        # SortOption.DEFAULT keeps the original order (by stars)
 
         total = len(result)
         start = (page - 1) * per_page

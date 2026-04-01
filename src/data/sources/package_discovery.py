@@ -32,12 +32,14 @@ def classify_by_summary(summary: str, name: str) -> PackageType:
 
 
 def is_flet_dependency(requires_dist: list[str] | None) -> bool:
-    """Check if a package depends on flet."""
+    """Check if a package depends on flet (including flet[extras])."""
     if not requires_dist:
         return False
     for req in requires_dist:
         dep_name = req.split(";")[0].split(" ")[0].split(">")[0].split("=")[0].split("<")[0]
-        if dep_name.strip().lower() == "flet":
+        # Strip extras: "flet[all]" → "flet"
+        base_name = dep_name.split("[")[0].strip().lower()
+        if base_name == "flet":
             return True
     return False
 
@@ -241,23 +243,3 @@ class PackageDiscovery:
         # Filter to flet-related only
         all_packages = await self.filter_flet_related(all_packages, pypi_only=pypi_only)
         return all_packages
-
-    async def get_service_extension_names(self) -> list[str]:
-        """Get names of official extensions classified as Services."""
-        names = await self.get_official_extension_names()
-        result: list[str] = []
-        for name in names:
-            pkg = await self.fetch_pypi_package(name)
-            if pkg and pkg.package_type == PackageType.SERVICE:
-                result.append(name)
-        return result
-
-    async def get_ui_control_extension_names(self) -> list[str]:
-        """Get names of official extensions classified as UI Controls."""
-        names = await self.get_official_extension_names()
-        result: list[str] = []
-        for name in names:
-            pkg = await self.fetch_pypi_package(name)
-            if pkg and pkg.package_type == PackageType.UI_CONTROL:
-                result.append(name)
-        return result

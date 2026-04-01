@@ -21,6 +21,7 @@ class ApiService:
         self._discovery = PackageDiscovery(self._github_source, self._pypi_source, self._cache)
         self._index = PackageIndexService(
             discovery=self._discovery,
+            github=self._github_source,
             pypi=self._pypi_source,
             clickhouse=self._clickhouse_source,
             cache=self._cache,
@@ -31,6 +32,7 @@ class ApiService:
             clickhouse_source=self._clickhouse_source,
             cache=self._cache,
             index=self._index,
+            discovery=self._discovery,
         )
 
     @property

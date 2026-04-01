@@ -2,6 +2,7 @@
 
 import flet as ft
 
+from src.domain.entities.package import SortOption
 from src.presentation.navigation.app_router import build_navigate_url, build_packages_url
 
 
@@ -45,7 +46,7 @@ class NavigationService:
     def push_packages_url(
         self,
         query: str = "",
-        sort: str = "default ranking",
+        sort: str = SortOption.DEFAULT,
         filter_type: str | None = None,
         official: bool = False,
         categories: list[str] | None = None,

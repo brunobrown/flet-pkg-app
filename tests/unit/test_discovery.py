@@ -33,7 +33,7 @@ class TestIsFletDependency:
         assert is_flet_dependency(["flet>=0.20", "httpx"]) is True
 
     def test_flet_with_extras(self) -> None:
-        assert is_flet_dependency(["flet[all]>=0.20"]) is False  # "flet[all]" != "flet"
+        assert is_flet_dependency(["flet[all]>=0.20"]) is True
 
     def test_flet_exact(self) -> None:
         assert is_flet_dependency(["flet"]) is True

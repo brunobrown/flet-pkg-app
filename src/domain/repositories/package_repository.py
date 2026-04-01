@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.domain.entities.package import Package
+from src.domain.entities.package import Package, SortOption
 
 
 class PackageRepository(ABC):
@@ -10,7 +10,7 @@ class PackageRepository(ABC):
         query: str,
         page: int = 1,
         per_page: int = 10,
-        sort: str = "default ranking",
+        sort: str = SortOption.DEFAULT,
         package_type: str | None = None,
         official_only: bool = False,
         pypi_only: bool = True,
@@ -31,19 +31,21 @@ class PackageRepository(ABC):
         """Get official Flet packages."""
 
     @abstractmethod
-    async def get_trending_packages(self, limit: int = 6) -> list[Package]:
+    async def get_trending_packages(self, limit: int = 6, pypi_only: bool = True) -> list[Package]:
         """Get trending packages."""
 
     @abstractmethod
-    async def get_service_packages(self, limit: int = 6) -> list[Package]:
+    async def get_service_packages(self, limit: int = 6, pypi_only: bool = True) -> list[Package]:
         """Get service-type extension packages."""
 
     @abstractmethod
-    async def get_ui_control_packages(self, limit: int = 6) -> list[Package]:
+    async def get_ui_control_packages(
+        self, limit: int = 6, pypi_only: bool = True
+    ) -> list[Package]:
         """Get UI control extension packages."""
 
     @abstractmethod
-    async def get_python_packages(self, limit: int = 6) -> list[Package]:
+    async def get_python_packages(self, limit: int = 6, pypi_only: bool = True) -> list[Package]:
         """Get Python packages that depend on Flet."""
 
     @abstractmethod

@@ -1,4 +1,4 @@
-from src.domain.entities.package import Package
+from src.domain.entities.package import Package, SortOption
 from src.domain.repositories.package_repository import PackageRepository
 
 
@@ -11,7 +11,7 @@ class SearchPackagesUseCase:
         query: str,
         page: int = 1,
         per_page: int = 10,
-        sort: str = "default ranking",
+        sort: str = SortOption.DEFAULT,
         package_type: str | None = None,
         official_only: bool = False,
         pypi_only: bool = True,

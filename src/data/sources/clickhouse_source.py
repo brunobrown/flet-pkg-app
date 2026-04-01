@@ -1,5 +1,6 @@
 """ClickHouse public PyPI stats — batch queries, no rate limiting, <10ms responses."""
 
+import re
 from typing import Any
 
 import httpx
@@ -8,6 +9,16 @@ from config import settings
 from src.core.logger import get_logger
 
 logger = get_logger(__name__)
+
+# Package names: only alphanumeric, hyphens, underscores, dots
+_SAFE_NAME_RE = re.compile(r"^[a-zA-Z0-9._-]+$")
+
+
+def _sanitize_name(name: str) -> str:
+    """Validate and return a safe package name for SQL queries."""
+    if not _SAFE_NAME_RE.match(name):
+        raise ValueError(f"Invalid package name: {name!r}")
+    return name
 
 
 class ClickHouseSource:
@@ -41,7 +52,18 @@ class ClickHouseSource:
         if not package_names:
             return {}
 
-        escaped = ", ".join(f"'{n}'" for n in package_names)
+        safe_names = []
+        for name in package_names:
+            try:
+                safe_names.append(_sanitize_name(name))
+            except ValueError:
+                logger.warning("Skipping invalid package name: %s", name)
+
+        if not safe_names:
+            return {}
+
+        escaped = ", ".join(f"'{n}'" for n in safe_names)
+        days = int(days)
         sql = (
             f"SELECT project, sum(count) as downloads "
             f"FROM pypi.pypi_downloads_per_day "
@@ -58,10 +80,9 @@ class ClickHouseSource:
 
     async def get_total_downloads(self, package_name: str) -> int:
         """Get all-time total downloads."""
+        name = _sanitize_name(package_name)
         sql = (
-            f"SELECT sum(count) as total "
-            f"FROM pypi.pypi_downloads_per_day "
-            f"WHERE project = '{package_name}'"
+            f"SELECT sum(count) as total FROM pypi.pypi_downloads_per_day WHERE project = '{name}'"
         )
         rows = await self._query(sql)
         if rows:
@@ -72,30 +93,35 @@ class ClickHouseSource:
         self, package_name: str, limit: int = 5
     ) -> list[dict[str, Any]]:
         """Get downloads broken down by version."""
+        name = _sanitize_name(package_name)
+        limit = int(limit)
         sql = (
             f"SELECT version, sum(count) as downloads "
             f"FROM pypi.pypi_downloads_per_day_by_version "
-            f"WHERE project = '{package_name}' "
+            f"WHERE project = '{name}' "
             f"GROUP BY version ORDER BY downloads DESC LIMIT {limit}"
         )
         return await self._query(sql)
 
     async def get_downloads_trend(self, package_name: str, weeks: int = 8) -> list[dict[str, Any]]:
         """Get weekly download trend."""
+        name = _sanitize_name(package_name)
+        days = int(weeks) * 7
         sql = (
             f"SELECT toStartOfWeek(date)::Date32 AS week, sum(count) AS downloads "
             f"FROM pypi.pypi_downloads_per_day "
-            f"WHERE project = '{package_name}' AND date >= today() - {weeks * 7} "
+            f"WHERE project = '{name}' AND date >= today() - {days} "
             f"GROUP BY week ORDER BY week DESC"
         )
         return await self._query(sql)
 
     async def get_package_metadata(self, package_name: str) -> dict[str, Any] | None:
         """Get package metadata from ClickHouse pypi.projects table."""
+        name = _sanitize_name(package_name)
         sql = (
             f"SELECT name, version, summary, author, license, home_page, requires_dist "
             f"FROM pypi.projects "
-            f"WHERE name = '{package_name}' "
+            f"WHERE name = '{name}' "
             f"ORDER BY upload_time DESC LIMIT 1"
         )
         rows = await self._query(sql)

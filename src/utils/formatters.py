@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def format_number(n: int) -> str:
@@ -14,7 +14,10 @@ def format_date(iso_date: str) -> str:
         return ""
     try:
         dt = datetime.fromisoformat(iso_date.replace("Z", "+00:00"))
-        now = datetime.now(dt.tzinfo)
+        # Always use UTC to avoid timezone mismatches
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
         delta = now - dt
         if delta.days > 365:
             years = delta.days // 365

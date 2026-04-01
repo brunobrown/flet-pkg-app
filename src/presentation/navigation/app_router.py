@@ -3,6 +3,17 @@
 import urllib.parse
 from dataclasses import dataclass, field
 
+from src.domain.entities.package import SortOption
+
+
+def _safe_int(value: str, default: int = 0) -> int:
+    """Parse string to int, returning default on failure."""
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return default
+
+
 # --- Route constants ---
 ROUTE_HOME = "/"
 ROUTE_GUIDE = "/guide"
@@ -24,7 +35,7 @@ class ParsedRoute:
     page: str = "home"
     package_name: str = ""
     query: str = ""
-    sort: str = "default ranking"
+    sort: str = SortOption.DEFAULT
     filter_type: str | None = None
     official: bool = False
     categories: list[str] = field(default_factory=list)
@@ -49,11 +60,11 @@ def parse_route(route: str) -> ParsedRoute:
         return ParsedRoute(
             page="packages",
             query=params.get("q", ""),
-            sort=params.get("sort", "default ranking"),
+            sort=params.get("sort", SortOption.DEFAULT),
             filter_type=TYPE_URL_TO_DOMAIN.get(params.get("type", "")),
             official=params.get("official", "") == "true",
             categories=categories,
-            page_num=int(params.get("page", "1")),
+            page_num=_safe_int(params.get("page", "1"), default=1),
         )
 
     if path.startswith("packages/"):
@@ -67,7 +78,7 @@ def parse_route(route: str) -> ParsedRoute:
 
 def build_packages_url(
     query: str = "",
-    sort: str = "default ranking",
+    sort: str = SortOption.DEFAULT,
     filter_type: str | None = None,
     official: bool = False,
     categories: list[str] | None = None,
@@ -77,7 +88,7 @@ def build_packages_url(
     qparams: dict[str, str] = {}
     if query:
         qparams["q"] = query
-    if sort and sort != "default ranking":
+    if sort and sort != SortOption.DEFAULT:
         qparams["sort"] = sort
     if filter_type:
         type_key = TYPE_DOMAIN_TO_URL.get(filter_type, "")
@@ -118,11 +129,11 @@ def build_navigate_url(target: str) -> str:
         return build_detail_url(name)
     if target.startswith("packages_filtered:"):
         parts = target.split(":", 3)
-        sort = parts[1] if len(parts) > 1 else "default ranking"
+        sort = parts[1] if len(parts) > 1 else SortOption.DEFAULT
         type_key = parts[2] if len(parts) > 2 else ""
         official_str = parts[3] if len(parts) > 3 else ""
         qparams: dict[str, str] = {}
-        if sort and sort != "default ranking":
+        if sort and sort != SortOption.DEFAULT:
             qparams["sort"] = sort
         if type_key:
             qparams["type"] = type_key

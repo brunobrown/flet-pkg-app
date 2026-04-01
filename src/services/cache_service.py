@@ -1,4 +1,5 @@
 import time
+from collections import OrderedDict
 from typing import Any
 
 from config import settings
@@ -8,9 +9,16 @@ logger = get_logger(__name__)
 
 
 class CacheService:
-    def __init__(self, ttl: int = settings.CACHE_TTL_SECONDS):
+    """In-memory cache with TTL expiration and LRU eviction.
+
+    Entries expire after `ttl` seconds. When `max_entries` is reached,
+    the least recently used entry is evicted on write.
+    """
+
+    def __init__(self, ttl: int = settings.CACHE_TTL_SECONDS, max_entries: int = 10000):
         self._default_ttl = ttl
-        self._store: dict[str, tuple[Any, float, int]] = {}
+        self._max_entries = max_entries
+        self._store: OrderedDict[str, tuple[Any, float, int]] = OrderedDict()
 
     def get(self, key: str) -> Any | None:
         entry = self._store.get(key)
@@ -20,9 +28,17 @@ class CacheService:
         if time.time() - timestamp > ttl:
             del self._store[key]
             return None
+        # Move to end (most recently used)
+        self._store.move_to_end(key)
         return value
 
     def set(self, key: str, value: Any, ttl: int | None = None) -> None:
+        # If key exists, remove first to avoid unnecessary eviction
+        if key in self._store:
+            del self._store[key]
+        # Evict LRU entries if at capacity
+        while len(self._store) >= self._max_entries:
+            self._store.popitem(last=False)
         self._store[key] = (value, time.time(), ttl if ttl is not None else self._default_ttl)
 
     def invalidate(self, key: str) -> None:

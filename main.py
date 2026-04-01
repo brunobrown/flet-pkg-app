@@ -11,6 +11,7 @@ import logging
 
 import flet as ft
 
+from src.domain.entities.package import SortOption
 from src.presentation.app import App
 from src.presentation.hooks.use_packages import (
     load_home_data,
@@ -28,11 +29,24 @@ from src.services.api_service import ApiService
 
 
 def _patch_session_dispatch(session) -> None:
-    """Gracefully handle events on controls that were replaced during re-render."""
+    """Gracefully handle events on controls that were replaced during re-render.
+
+    Accesses Flet internal _Session__index (name-mangled). If the attribute
+    is removed in a future Flet version, the patch is skipped safely.
+    Pinned to Flet 0.83.x — verify on every Flet upgrade.
+    """
+    index = getattr(session, "_Session__index", None)
+    if index is None:
+        logging.warning(
+            "Flet Session.__index not found — _patch_session_dispatch skipped. "
+            "Check compatibility with current Flet version."
+        )
+        return
+
     original_dispatch = session.dispatch_event
 
     async def safe_dispatch(control_id, event_name, event_data):
-        control = session._Session__index.get(control_id)
+        control = index.get(control_id)
         if control is None:
             return
         try:
@@ -75,7 +89,9 @@ def main(page: ft.Page) -> None:
 
         per_page = await prefs.get("per_page")
         if per_page is not None:
-            pkg_state.per_page = int(per_page)
+            val = int(per_page)
+            if val in (10, 25, 50, 100):
+                pkg_state.per_page = val
 
     page.run_task(_load_preferences)
     page.run_task(api.start_background_tasks)
@@ -95,7 +111,7 @@ def main(page: ft.Page) -> None:
 
     async def _load_search(
         query: str = "",
-        sort: str = "default ranking",
+        sort: str = SortOption.DEFAULT,
         filter_type: str | None = None,
         official: bool = False,
         categories: list[str] | None = None,
@@ -196,6 +212,12 @@ def main(page: ft.Page) -> None:
         reload_packages=handle_reload_packages,
         copy_to_clipboard=handle_copy,
     )
+
+    # --- Graceful shutdown ---
+    def _on_disconnect(_e) -> None:
+        page.run_task(api.close)
+
+    page.on_disconnect = _on_disconnect
 
     # --- Initial load + render ---
     page.render_views(App, ctx_value, app_state)

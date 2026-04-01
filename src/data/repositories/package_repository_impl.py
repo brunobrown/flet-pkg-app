@@ -1,13 +1,14 @@
 import asyncio
 
 from config import settings
+from src.core.exceptions import PackageNotFoundError
 from src.core.logger import get_logger
 from src.data.models.mappers import github_repo_to_package, pypi_info_to_package
 from src.data.sources.clickhouse_source import ClickHouseSource
 from src.data.sources.github_source import GitHubSource
 from src.data.sources.package_discovery import PackageDiscovery, classify_by_summary
 from src.data.sources.pypi_source import PyPISource
-from src.domain.entities.package import Package
+from src.domain.entities.package import Package, SortOption
 from src.domain.repositories.package_repository import PackageRepository
 from src.services.cache_service import CacheService
 from src.services.package_index_service import PackageIndexService
@@ -23,13 +24,14 @@ class PackageRepositoryImpl(PackageRepository):
         clickhouse_source: ClickHouseSource,
         cache: CacheService,
         index: PackageIndexService,
+        discovery: PackageDiscovery,
     ):
         self._github = github_source
         self._pypi = pypi_source
         self._ch = clickhouse_source
         self._cache = cache
         self._index = index
-        self._discovery = PackageDiscovery(github_source, pypi_source, cache)
+        self._discovery = discovery
 
     # --- Downloads (used only by detail pages) ---
 
@@ -65,7 +67,7 @@ class PackageRepositoryImpl(PackageRepository):
         query: str,
         page: int = 1,
         per_page: int = 10,
-        sort: str = "default ranking",
+        sort: str = SortOption.DEFAULT,
         package_type: str | None = None,
         official_only: bool = False,
         pypi_only: bool = True,
@@ -178,7 +180,7 @@ class PackageRepositoryImpl(PackageRepository):
         if pkg is None:
             pkg = await self._fetch_github_only_package(package_name)
             if pkg is None:
-                raise Exception(f"Package '{package_name}' not found on PyPI or GitHub")
+                raise PackageNotFoundError(f"Package '{package_name}' not found on PyPI or GitHub")
 
         official_names = await self._discovery.get_official_extension_names()
         is_official = package_name in official_names
@@ -203,7 +205,7 @@ class PackageRepositoryImpl(PackageRepository):
                 pkg.changelog = changelog
                 pkg.stars = await self._get_flet_repo_stars()
             except Exception:
-                pass
+                logger.warning("Failed to fetch README/changelog for official %s", package_name)
         elif pkg.github_owner and pkg.github_repo:
             # Use github_owner as publisher (always correct for profile URL)
             pkg.publisher = pkg.github_owner

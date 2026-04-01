@@ -5,13 +5,7 @@ import flet as ft
 from src.domain.entities.package import Package
 from src.presentation.themes.colors import FLET_PINK
 from src.utils.formatters import format_date, format_number, truncate
-
-
-def _github_profile_url(name: str) -> str:
-    """Map publisher name to GitHub profile URL."""
-    if name == "flet.dev":
-        return "https://github.com/flet-dev"
-    return f"https://github.com/{name}"
+from src.utils.urls import github_profile_url
 
 
 @ft.component
@@ -23,7 +17,7 @@ def _publisher_link(name: str, size: int = 11) -> ft.Control:
     hovered, set_hovered = ft.use_state(False)
 
     def _open_profile(e) -> None:
-        e.page.run_task(ft.UrlLauncher().launch_url, _github_profile_url(name))
+        e.page.run_task(ft.UrlLauncher().launch_url, github_profile_url(name))
 
     decoration = ft.TextDecoration.UNDERLINE if hovered else ft.TextDecoration.NONE
     text_color = FLET_PINK if hovered else ft.Colors.PRIMARY

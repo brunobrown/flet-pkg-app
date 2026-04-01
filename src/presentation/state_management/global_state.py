@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 
 import flet as ft
 
-from src.domain.entities.package import Package
+from src.domain.entities.package import Package, SortOption
 from src.domain.usecases.get_home_data import HomeData
 
 
@@ -17,9 +17,9 @@ class PackagesState:
     packages: list[Package] = field(default_factory=list)
     total_count: int = 0
     page_number: int = 1
-    per_page: int = 12
+    per_page: int = 10
     search_query: str = ""
-    sort_by: str = "default ranking"
+    sort_by: str = SortOption.DEFAULT
     filter_type: str | None = None
     filter_official: bool = False
     filter_categories: list[str] = field(default_factory=list)
@@ -58,20 +58,11 @@ class UserState:
 
 @ft.observable
 @dataclass
-class ThemeState:
-    """Theme preferences."""
-
-    is_dark: bool = True
-
-
-@ft.observable
-@dataclass
 class AppState:
     """Root state — aggregates all sub-states."""
 
     packages: PackagesState = field(default_factory=PackagesState)
     user: UserState = field(default_factory=UserState)
-    theme: ThemeState = field(default_factory=ThemeState)
 
     # Navigation — simple page identifier
     current_page: str = "home"
