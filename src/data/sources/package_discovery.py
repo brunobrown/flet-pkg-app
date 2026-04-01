@@ -95,13 +95,13 @@ class PackageDiscovery:
                 if item.get("type") == "dir" and item["name"] not in settings.EXCLUDED_PACKAGES
             ]
             if names:
-                self._cache.set(cache_key, names, ttl=86400)
+                self._cache.set(cache_key, names, ttl=settings.CACHE_TTL_DISCOVERY)
                 return names
         except Exception as e:
             logger.warning("GitHub API unavailable for official packages: %s", e)
 
         logger.info("Using fallback official package list")
-        self._cache.set(cache_key, self._FALLBACK_OFFICIAL, ttl=3600)
+        self._cache.set(cache_key, self._FALLBACK_OFFICIAL, ttl=settings.INDEX_REINDEX_INTERVAL)
         return self._FALLBACK_OFFICIAL
 
     async def fetch_pypi_package(self, name: str) -> Package | None:
@@ -158,15 +158,15 @@ class PackageDiscovery:
         # Fast path: obvious flet package by name
         if name_lower.startswith(("flet-", "flet_")):
             if not pypi_only:
-                self._cache.set(cache_key, True, ttl=86400)
+                self._cache.set(cache_key, True, ttl=settings.CACHE_TTL_DISCOVERY)
                 return True
             # Verify it exists on PyPI
             try:
                 await self._pypi.get_package_info(name)
-                self._cache.set(cache_key, True, ttl=86400)
+                self._cache.set(cache_key, True, ttl=settings.CACHE_TTL_DISCOVERY)
                 return True
             except Exception:
-                self._cache.set(cache_key, False, ttl=86400)
+                self._cache.set(cache_key, False, ttl=settings.CACHE_TTL_DISCOVERY)
                 return False
 
         # For non-"flet-" packages: check PyPI metadata for actual flet dependency.
@@ -184,14 +184,14 @@ class PackageDiscovery:
                 related = True
             elif "flet" in [k.strip().lower() for k in (info.get("keywords") or "").split(",")]:
                 related = True
-            self._cache.set(cache_key, related, ttl=86400)
+            self._cache.set(cache_key, related, ttl=settings.CACHE_TTL_DISCOVERY)
             return related
         except Exception:
             # Not on PyPI — accept only if has flet topic AND pypi_only is False
             if not pypi_only and has_flet_topic:
-                self._cache.set(cache_key, True, ttl=86400)
+                self._cache.set(cache_key, True, ttl=settings.CACHE_TTL_DISCOVERY)
                 return True
-            self._cache.set(cache_key, False, ttl=3600)
+            self._cache.set(cache_key, False, ttl=settings.INDEX_REINDEX_INTERVAL)
             return False
 
     async def filter_flet_related(

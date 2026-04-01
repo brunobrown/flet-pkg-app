@@ -2,6 +2,7 @@
 
 import flet as ft
 
+from config import settings
 from src.domain.entities.package import Package
 from src.presentation.themes.colors import FLET_PINK
 from src.utils.formatters import format_date, format_number, truncate
@@ -315,9 +316,8 @@ def PackageCardGrid(
             on_click(package)
 
     # Clickable hashtag topics (max 3 to save space)
-    visible_topics = [
-        t for t in package.topics[:6] if t.lower() not in ("flet", "python", "python3", "flet-dev")
-    ][:3]
+    excluded = settings.get("EXCLUDED_TOPICS", [])
+    visible_topics = [t for t in package.topics[:6] if t.lower() not in excluded][:3]
     topics_row = ft.Row(
         controls=[_TopicTag(topic=t, on_search=on_search) for t in visible_topics],
         spacing=8,

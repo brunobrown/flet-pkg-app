@@ -111,7 +111,7 @@ class PackageIndexService:
             gh = self._github
             repo = await gh.get_repository("flet-dev", "flet")
             stars = repo.get("stargazers_count", 0)
-            self._cache.set("flet_repo_stars", stars, ttl=3600)
+            self._cache.set("flet_repo_stars", stars, ttl=settings.INDEX_REINDEX_INTERVAL)
             return stars
         except Exception:
             return 0
@@ -135,7 +135,9 @@ class PackageIndexService:
 
         if uncached:
             try:
-                ch_data = await self._ch.get_downloads_batch(uncached, days=30)
+                ch_data = await self._ch.get_downloads_batch(
+                    uncached, days=settings.INDEX_DOWNLOAD_DAYS
+                )
                 for name in uncached:
                     downloads = ch_data.get(name, 0)
                     result[name] = downloads

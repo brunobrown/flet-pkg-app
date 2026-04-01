@@ -2,9 +2,13 @@
 
 import flet as ft
 
+from config import settings
+
 
 @ft.component
 def AppFooter() -> ft.Control:
+    links = settings.get("FOOTER_LINKS", {})
+
     return ft.Container(
         content=ft.Column(
             controls=[
@@ -17,28 +21,28 @@ def AppFooter() -> ft.Control:
                                 icon=ft.Icons.CHAT_BUBBLE_OUTLINE,
                                 icon_color=ft.Colors.ON_SURFACE_VARIANT,
                                 icon_size=18,
-                                url="https://discord.gg/dzWXP8SHG8",
+                                url=links.get("discord", ""),
                                 tooltip="Discord",
                             ),
                             ft.IconButton(
                                 icon=ft.Icons.CODE,
                                 icon_color=ft.Colors.ON_SURFACE_VARIANT,
                                 icon_size=18,
-                                url="https://github.com/flet-dev/flet",
+                                url=links.get("github", ""),
                                 tooltip="GitHub",
                             ),
                             ft.IconButton(
                                 icon=ft.Icons.ARTICLE_OUTLINED,
                                 icon_color=ft.Colors.ON_SURFACE_VARIANT,
                                 icon_size=18,
-                                url="https://flet.dev/blog/",
+                                url=links.get("blog", ""),
                                 tooltip="Blog",
                             ),
                             ft.IconButton(
                                 icon=ft.Icons.SUPPORT,
                                 icon_color=ft.Colors.ON_SURFACE_VARIANT,
                                 icon_size=18,
-                                url="https://flet.dev/support/",
+                                url=links.get("support", ""),
                                 tooltip="Support",
                             ),
                         ],

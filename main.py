@@ -11,6 +11,7 @@ import logging
 
 import flet as ft
 
+from config import settings
 from src.domain.entities.package import SortOption
 from src.presentation.app import App
 from src.presentation.hooks.use_packages import (
@@ -90,7 +91,7 @@ def main(page: ft.Page) -> None:
         per_page = await prefs.get("per_page")
         if per_page is not None:
             val = int(per_page)
-            if val in (10, 25, 50, 100):
+            if val in settings.get("PAGE_SIZE_OPTIONS", [10, 25, 50, 100]):
                 pkg_state.per_page = val
 
     page.run_task(_load_preferences)

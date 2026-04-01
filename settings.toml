@@ -1,25 +1,48 @@
+# ============================================= [ DEFAULT ] ========================================================= #
+
 [default]
+
+# --- APIs ---
 GITHUB_API_BASE = "https://api.github.com"
 PYPI_API_BASE = "https://pypi.org"
 PYPISTATS_API_BASE = "https://pypistats.org/api"
 
-FLET_ORG = "flet-dev"
-FLET_REPO = "flet"
-FLET_PACKAGES_PATH = "sdk/python/packages"
-
-CACHE_TTL_SECONDS = 300
-CACHE_TTL_DOWNLOADS = 86400
-INDEX_REINDEX_INTERVAL = 3600
-INDEX_MAX_GITHUB_PAGES = 5
-
+# --- ClickHouse ---
 CLICKHOUSE_URL = "https://sql-clickhouse.clickhouse.com"
 CLICKHOUSE_USER = "demo"
 CLICKHOUSE_PASSWORD = ""
 
+# --- Flet Official ---
+FLET_ORG = "flet-dev"
+FLET_REPO = "flet"
+FLET_PACKAGES_PATH = "sdk/python/packages"
+FLET_OFFICIAL_PUBLISHER = "flet.dev"
+
+# --- Cache ---
+CACHE_TTL_SECONDS = 300
+CACHE_TTL_DOWNLOADS = 86400
+CACHE_TTL_DISCOVERY = 86400
+CACHE_MAX_ENTRIES = 10000
+
+# --- Index ---
+INDEX_REINDEX_INTERVAL = 3600
+INDEX_MAX_GITHUB_PAGES = 5
+INDEX_GITHUB_PER_PAGE = 100
+INDEX_DOWNLOAD_DAYS = 30
+
+# --- Rate Limiting ---
 PYPISTATS_MAX_CONCURRENT = 3
 GITHUB_MAX_CONCURRENT = 10
 MAX_RETRIES = 3
 
+# --- Pagination ---
+PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
+DEFAULT_PER_PAGE = 10
+
+# --- Topics to exclude from card hashtags ---
+EXCLUDED_TOPICS = ["flet", "python", "python3", "flet-dev"]
+
+# --- Sort Options ---
 SORT_OPTIONS = [
     "default ranking",
     "most stars",
@@ -29,8 +52,10 @@ SORT_OPTIONS = [
     "trending",
 ]
 
+# --- Package Types ---
 PACKAGE_TYPES = ["UI Controls", "Services"]
 
+# --- Excluded Packages (core, not extensions) ---
 EXCLUDED_PACKAGES = [
     "flet",
     "flet-cli",
@@ -39,6 +64,7 @@ EXCLUDED_PACKAGES = [
     "flet-runtime",
 ]
 
+# --- Classification Keywords ---
 SERVICE_KEYWORDS = [
     "service",
     "storage",
@@ -73,12 +99,28 @@ UI_CONTROL_KEYWORDS = [
     "color picker",
 ]
 
+# --- Category Filters ---
 CATEGORIES = {gui = ["gui", "ui", "flet-gui", "interface", "flet-ui"], mobile = ["mobile", "android", "ios"], desktop = ["desktop", "desktop-app", "cross-platform"], web = ["web", "webapp", "fastapi", "flask"], devtools = ["flet-routing", "routing", "flet-architecture", "flet-design-pattern", "devtools"], database = ["sqlite", "database", "firebase", "supabase"], media = ["music-player", "audio", "video", "camera", "lottie", "rive"]}
+
+# --- Footer Links ---
+[default.FOOTER_LINKS]
+discord = "https://discord.gg/dzWXP8SHG8"
+github = "https://github.com/flet-dev/flet"
+blog = "https://flet.dev/blog/"
+support = "https://flet.dev/support/"
+
+# ============================================= [ DEVELOPMENT ] ====================================================== #
 
 [development]
 
+# ============================================= [ HOMOLOGATION ] ===================================================== #
+
 [homologation]
 
+# ============================================= [ PRODUCTION ] ======================================================= #
+
 [production]
+
+# ============================================= [ TESTING ] ========================================================== #
 
 [testing]

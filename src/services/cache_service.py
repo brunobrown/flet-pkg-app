@@ -15,7 +15,11 @@ class CacheService:
     the least recently used entry is evicted on write.
     """
 
-    def __init__(self, ttl: int = settings.CACHE_TTL_SECONDS, max_entries: int = 10000):
+    def __init__(
+        self,
+        ttl: int = settings.CACHE_TTL_SECONDS,
+        max_entries: int = settings.get("CACHE_MAX_ENTRIES", 10000),
+    ):
         self._default_ttl = ttl
         self._max_entries = max_entries
         self._store: OrderedDict[str, tuple[Any, float, int]] = OrderedDict()

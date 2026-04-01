@@ -40,7 +40,7 @@ class PackageRepositoryImpl(PackageRepository):
         if cached is not None:
             return cached
         try:
-            ch_data = await self._ch.get_downloads_batch([name], days=30)
+            ch_data = await self._ch.get_downloads_batch([name], days=settings.INDEX_DOWNLOAD_DAYS)
             downloads = ch_data.get(name, 0)
             self._cache.set(f"dl:{name}", downloads, ttl=settings.CACHE_TTL_DOWNLOADS)
             return downloads

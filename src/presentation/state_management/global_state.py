@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 
 import flet as ft
 
+from config import settings
 from src.domain.entities.package import Package, SortOption
 from src.domain.usecases.get_home_data import HomeData
 
@@ -17,7 +18,7 @@ class PackagesState:
     packages: list[Package] = field(default_factory=list)
     total_count: int = 0
     page_number: int = 1
-    per_page: int = 10
+    per_page: int = settings.get("DEFAULT_PER_PAGE", 10)
     search_query: str = ""
     sort_by: str = SortOption.DEFAULT
     filter_type: str | None = None

@@ -2,9 +2,10 @@
 
 import flet as ft
 
+from config import settings
 from src.presentation.themes.colors import FLET_PINK
 
-PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
+PAGE_SIZE_OPTIONS = settings.get("PAGE_SIZE_OPTIONS", [10, 25, 50, 100])
 
 
 def _page_button(
