@@ -167,6 +167,30 @@ description or repository topics.
 
 ---
 
+## Verified Badge
+
+Packages that meet quality standards automatically receive a **Verified** badge \
+on Flet PKG. This badge signals to users that the package is well-maintained \
+and trustworthy.
+
+**Criteria (all must be met):**
+
+- Published on PyPI
+- Has at least one released version
+- More than 100 downloads in the last month
+- Updated within the last 6 months
+- Has a license defined
+- Has a meaningful description (at least 30 characters)
+- Has at least one GitHub topic or PyPI keyword
+
+The badge appears on the package card in the listing page and as a seal in the \
+package detail sidebar. The verification is recalculated every hour when the \
+index refreshes.
+
+**Note:** Official packages maintained by the Flet team are automatically verified.
+
+---
+
 ## Need Help?
 
 If your package is not appearing on Flet PKG, check that:

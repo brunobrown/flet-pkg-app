@@ -141,6 +141,19 @@ def PackageDetailPage(
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             ),
+            # Verified seal
+            ft.Container(
+                content=ft.Image(
+                    src="/images/verified-badge-1.png",
+                    width=80,
+                    height=80,
+                    fit=ft.BoxFit.CONTAIN,
+                ),
+                alignment=ft.Alignment.CENTER,
+                padding=ft.Padding(left=0, top=8, right=0, bottom=8),
+            )
+            if pkg.is_verified
+            else ft.Container(),
             ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
             _sidebar_section(
                 "Statistics",

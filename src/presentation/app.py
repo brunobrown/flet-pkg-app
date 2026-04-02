@@ -118,6 +118,7 @@ def App(ctx_value: AppContextValue, state: AppState) -> ft.View:
         padding=0,
         spacing=0,
         bgcolor=ft.Colors.SURFACE_CONTAINER_LOWEST,
+        services=[ft.SharedPreferences(), ft.UrlLauncher()],
     )
 
     view_ref.current = view

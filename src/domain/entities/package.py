@@ -38,6 +38,7 @@ class Package:
     forks: int = 0
     package_type: PackageType = PackageType.PYTHON_PACKAGE
     is_official: bool = False
+    is_verified: bool = False
     homepage_url: str = ""
     issues_url: str = ""
     dependencies: list[str] = field(default_factory=list)

@@ -240,6 +240,12 @@ class PackageRepositoryImpl(PackageRepository):
             pkg.is_official = True
             pkg.publisher = "flet.dev"
 
+        # Copy verified status from index (computed during build_index)
+        await self._index.wait_until_ready()
+        idx_pkgs, _ = self._index.query(text=package_name, pypi_only=False, per_page=1)
+        if idx_pkgs and idx_pkgs[0].name == pkg.name:
+            pkg.is_verified = idx_pkgs[0].is_verified
+
         self._cache.set(cache_key, pkg)
         return pkg
 

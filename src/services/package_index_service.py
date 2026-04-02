@@ -88,6 +88,9 @@ class PackageIndexService:
             # Enrich with downloads (batch ClickHouse)
             await self._enrich_downloads(all_packages)
 
+            # Calculate verified status
+            self._compute_verified(all_packages)
+
             # Sort by stars (default ranking)
             all_packages.sort(key=lambda p: p.stars, reverse=True)
 
@@ -147,6 +150,39 @@ class PackageIndexService:
 
         for pkg in pypi_pkgs:
             pkg.downloads = result.get(pkg.pypi_name, pkg.downloads)
+
+    @staticmethod
+    def _compute_verified(packages: list[Package]) -> None:
+        """Mark packages as verified based on quality criteria.
+
+        Criteria:
+        - Published on PyPI (has pypi_name)
+        - Has version (published at least once)
+        - Downloads > 100 in the last month
+        - Updated in the last 6 months
+        - Has a license defined
+        - Has a meaningful description (>= 30 chars)
+        - Has at least one topic or keyword
+        """
+        from datetime import datetime, timedelta, timezone
+
+        six_months_ago = (datetime.now(timezone.utc) - timedelta(days=180)).isoformat()
+        verified_count = 0
+
+        for pkg in packages:
+            pkg.is_verified = pkg.is_official or bool(
+                pkg.pypi_name
+                and pkg.version
+                and pkg.downloads > 100
+                and pkg.updated_at >= six_months_ago
+                and pkg.license
+                and len(pkg.description) >= 30
+                and (pkg.topics or pkg.keywords)
+            )
+            if pkg.is_verified:
+                verified_count += 1
+
+        logger.info("Verified packages: %d/%d", verified_count, len(packages))
 
     async def _verify_pypi_and_enrich(self, packages: list[Package]) -> None:
         """Verify PyPI existence for each package. Fill version if found.

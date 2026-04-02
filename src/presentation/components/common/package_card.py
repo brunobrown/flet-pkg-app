@@ -278,6 +278,34 @@ def PackageCardSmall(package: Package, on_click: object) -> ft.Control:
     )
 
 
+def _verified_badge() -> ft.Control:
+    """Verified badge — small pill with checkmark."""
+    return ft.Container(
+        content=ft.Row(
+            controls=[
+                ft.Icon(ft.Icons.VERIFIED, size=14, color="#4CAF50"),
+                ft.Text(
+                    "Verified",
+                    size=10,
+                    weight=ft.FontWeight.BOLD,
+                    color="#4CAF50",
+                ),
+            ],
+            spacing=4,
+            width=60,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+        border=ft.Border(
+            left=ft.BorderSide(1, "#4CAF50"),
+            top=ft.BorderSide(1, "#4CAF50"),
+            right=ft.BorderSide(1, "#4CAF50"),
+            bottom=ft.BorderSide(1, "#4CAF50"),
+        ),
+        border_radius=12,
+        padding=ft.Padding(left=8, top=2, right=8, bottom=2),
+    )
+
+
 @ft.component
 def _TopicTag(topic: str, on_search: object = None) -> ft.Control:
     """Clickable hashtag with hover effect (underline + pink)."""
@@ -358,6 +386,7 @@ def PackageCardGrid(
                     overflow=ft.TextOverflow.ELLIPSIS,
                 ),
                 topics_row if package.topics else ft.Container(),
+                _verified_badge() if package.is_verified else ft.Container(),
                 ft.Container(expand=True),
                 ft.Row(
                     controls=[
