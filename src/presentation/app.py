@@ -122,7 +122,7 @@ def App(ctx_value: AppContextValue, state: AppState, services: list | None = Non
             height=28,
             fit=ft.BoxFit.CONTAIN,
         ),
-        bgcolor="#FF5F5F",
+        bgcolor="#FFDD00",
         shape=ft.CircleBorder(),
         mini=True,
         tooltip="Buy me a coffee",
