@@ -13,7 +13,7 @@ from src.presentation.themes.colors import FLET_PINK
 
 
 @ft.component
-def App(ctx_value: AppContextValue, state: AppState) -> ft.View:
+def App(ctx_value: AppContextValue, state: AppState, services: list | None = None) -> ft.View:
     """state is passed as @ft.observable arg so Flet re-renders when it changes."""
     view_ref = ft.use_ref()
 
@@ -118,7 +118,7 @@ def App(ctx_value: AppContextValue, state: AppState) -> ft.View:
         padding=0,
         spacing=0,
         bgcolor=ft.Colors.SURFACE_CONTAINER_LOWEST,
-        services=[ft.SharedPreferences(), ft.UrlLauncher()],
+        services=services or [],
     )
 
     view_ref.current = view

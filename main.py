@@ -75,6 +75,7 @@ def main(page: ft.Page) -> None:
     pkg_state = app_state.packages
     nav = NavigationService(page)
     prefs = ft.SharedPreferences()
+    url_launcher = ft.UrlLauncher()
 
     # --- Load saved preferences ---
     async def _load_preferences() -> None:
@@ -109,6 +110,9 @@ def main(page: ft.Page) -> None:
         pkg_state.error = ""
         app_state.current_page = "detail"
         await load_package_detail_by_name(pkg_state, api, name)
+        # Force re-render by touching root observable
+        # (sub-observable changes may not propagate in all cases)
+        app_state.detail_package_name = name
 
     async def _load_search(
         query: str = "",
@@ -230,7 +234,7 @@ def main(page: ft.Page) -> None:
     page.on_disconnect = _on_disconnect
 
     # --- Initial load + render ---
-    page.render_views(App, ctx_value, app_state)
+    page.render_views(App, ctx_value, app_state, [prefs, url_launcher])
     _handle_route(page.route)
 
 

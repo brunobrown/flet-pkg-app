@@ -23,6 +23,7 @@ def PackageDetailPage(
     ctx = ft.use_context(AppCtx)
     active_tab, set_active_tab = ft.use_state(0)
     sidebar_open, set_sidebar_open = ft.use_state(False)
+    seal_open, set_seal_open = ft.use_state(False)
     is_dark = ctx.state.is_dark
 
     # Markdown styling adapted to theme mode
@@ -141,7 +142,7 @@ def PackageDetailPage(
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             ),
-            # Verified seal
+            # Verified seal (clickable)
             ft.Container(
                 content=ft.Image(
                     src="/images/verified-badge-1.png",
@@ -151,6 +152,8 @@ def PackageDetailPage(
                 ),
                 alignment=ft.Alignment.CENTER,
                 padding=ft.Padding(left=0, top=8, right=0, bottom=8),
+                on_click=lambda _: set_seal_open(True),
+                ink=True,
             )
             if pkg.is_verified
             else ft.Container(),
@@ -311,7 +314,43 @@ def PackageDetailPage(
             ink=True,
         )
 
-    return ft.Column(
+    # Seal overlay (dark background + centered seal)
+    seal_overlay = ft.Container(
+        content=ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.Image(
+                        src="/images/verified-badge-1.png",
+                        width=300,
+                        height=300,
+                        fit=ft.BoxFit.CONTAIN,
+                    ),
+                    ft.Text(
+                        "Verified Package",
+                        size=18,
+                        weight=ft.FontWeight.BOLD,
+                        color=ft.Colors.WHITE,
+                    ),
+                    ft.Text(
+                        pkg.name if pkg else "",
+                        size=14,
+                        color=ft.Colors.ON_SURFACE_VARIANT,
+                    ),
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                alignment=ft.MainAxisAlignment.CENTER,
+                spacing=12,
+            ),
+            padding=30,
+        ),
+        bgcolor=ft.Colors.with_opacity(0.85, ft.Colors.BLACK),
+        alignment=ft.Alignment(0, 0),
+        on_click=lambda _: set_seal_open(False),
+        visible=seal_open,
+        expand=True,
+    )
+
+    page_content = ft.Column(
         controls=[
             # FIXED: Header
             ft.Container(
@@ -422,6 +461,11 @@ def PackageDetailPage(
             AppFooter(),
         ],
         spacing=0,
+        expand=True,
+    )
+
+    return ft.Stack(
+        controls=[page_content, seal_overlay],
         expand=True,
     )
 
