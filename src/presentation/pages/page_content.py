@@ -3,6 +3,7 @@
 import flet as ft
 
 from src.domain.entities.package import Package
+from src.presentation.pages.contribute.contribute_page import ContributePage
 from src.presentation.pages.guide.developer_guide_page import DeveloperGuidePage
 from src.presentation.pages.home.home_page import HomePage
 from src.presentation.pages.package_detail.package_detail_page import PackageDetailPage
@@ -23,6 +24,8 @@ def PageContent() -> ft.Control:
 
     if state.current_page == "guide":
         return DeveloperGuidePage()
+    elif state.current_page == "contribute":
+        return ContributePage()
     elif state.current_page == "detail":
         return PackageDetailPage(
             state=pkg_state,

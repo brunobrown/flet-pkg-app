@@ -15,6 +15,7 @@ def AppHeader(
     on_search: object = None,
     on_toggle_pypi_filter: object = None,
     on_navigate_guide: object = None,
+    on_navigate_contribute: object = None,
     is_dark: bool = True,
     show_logo: bool = True,
     show_pypi_only: bool = True,
@@ -83,7 +84,9 @@ def AppHeader(
 
         desktop_items.extend(
             [
-                _help_menu(on_toggle_pypi_filter, show_pypi_only, on_navigate_guide),
+                _help_menu(
+                    on_toggle_pypi_filter, show_pypi_only, on_navigate_guide, on_navigate_contribute
+                ),
                 _theme_button(theme_icon, on_theme_toggle),
             ]
         )
@@ -96,7 +99,9 @@ def AppHeader(
         desktop_row = ft.Row(
             controls=[
                 ft.Container(expand=True),
-                _help_menu(on_toggle_pypi_filter, show_pypi_only, on_navigate_guide),
+                _help_menu(
+                    on_toggle_pypi_filter, show_pypi_only, on_navigate_guide, on_navigate_contribute
+                ),
                 _theme_button(theme_icon, on_theme_toggle),
             ],
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -196,6 +201,7 @@ def _help_menu(
     on_toggle_pypi_filter: object = None,
     show_pypi_only: bool = True,
     on_navigate_guide: object = None,
+    on_navigate_contribute: object = None,
 ) -> ft.Control:
     return ft.PopupMenuButton(
         content=ft.Row(
@@ -210,7 +216,10 @@ def _help_menu(
                 content="Developer Guide",
                 on_click=lambda _: on_navigate_guide() if on_navigate_guide else None,
             ),
-            ft.PopupMenuItem(content="About Flet PKG"),
+            ft.PopupMenuItem(
+                content="Support & Contribute",
+                on_click=lambda _: on_navigate_contribute() if on_navigate_contribute else None,
+            ),
             ft.PopupMenuItem(),  # divider
             ft.PopupMenuItem(
                 content=ft.Row(

@@ -5,13 +5,13 @@ description = "Flet PKG - Package discovery platform for the Flet ecosystem"
 requires-python = ">=3.12"
 dependencies = [
     "dynaconf>=3.2.13",
-    "flet>=0.83.0",
+    "flet>=0.84.0",
     "httpx>=0.28.1",
 ]
 
 [dependency-groups]
 dev = [
-    "flet[all]>=0.83.0",
+    "flet[all]>=0.84.0",
     "numpy>=2.4.4",
     "pillow>=12.1.1",
     "pytest>=9.0.2",

@@ -306,7 +306,6 @@ def PackagesPage(
                             ),
                             controls=[
                                 *package_list,
-                                # Pagination + footer scroll with content
                                 Pagination(
                                     current_page=state.page_number,
                                     total_items=state.total_count,
@@ -314,7 +313,6 @@ def PackagesPage(
                                     on_page_change=handle_page_change,
                                     on_per_page_change=handle_per_page_change,
                                 ),
-                                AppFooter(),
                             ],
                             padding=ft.Padding(left=20, top=0, right=20, bottom=0),
                         ),
@@ -326,6 +324,7 @@ def PackagesPage(
                 ),
                 expand=True,
             ),
+            AppFooter(),
         ],
         spacing=0,
         expand=True,

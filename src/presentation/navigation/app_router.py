@@ -17,6 +17,7 @@ def _safe_int(value: str, default: int = 0) -> int:
 # --- Route constants ---
 ROUTE_HOME = "/"
 ROUTE_GUIDE = "/guide"
+ROUTE_CONTRIBUTE = "/contribute"
 ROUTE_PACKAGES = "/packages"
 
 # --- Type mapping (URL param ↔ domain value) ---
@@ -53,6 +54,9 @@ def parse_route(route: str) -> ParsedRoute:
 
     if path == "guide":
         return ParsedRoute(page="guide")
+
+    if path == "contribute":
+        return ParsedRoute(page="contribute")
 
     if path == "packages":
         cat_str = params.get("cat", "")
@@ -124,6 +128,8 @@ def build_navigate_url(target: str) -> str:
         return ROUTE_HOME
     if target == "guide":
         return ROUTE_GUIDE
+    if target == "contribute":
+        return ROUTE_CONTRIBUTE
     if target.startswith("detail:"):
         name = target.split(":", 1)[1]
         return build_detail_url(name)

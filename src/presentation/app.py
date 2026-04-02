@@ -28,6 +28,8 @@ def App(ctx_value: AppContextValue, state: AppState) -> ft.View:
         index = e.control.selected_index
         if index == 0:  # Developer Guide
             ctx_value.navigate("guide")
+        elif index == 1:  # Support & Contribute
+            ctx_value.navigate("contribute")
 
     drawer = ft.NavigationDrawer(
         on_change=on_drawer_change,
@@ -51,7 +53,9 @@ def App(ctx_value: AppContextValue, state: AppState) -> ft.View:
             ),
             ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
             ft.NavigationDrawerDestination(label="Developer Guide", icon=ft.Icons.MENU_BOOK),
-            ft.NavigationDrawerDestination(label="About Flet PKG", icon=ft.Icons.INFO_OUTLINE),
+            ft.NavigationDrawerDestination(
+                label="Support & Contribute", icon=ft.Icons.FAVORITE_OUTLINE
+            ),
             ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
             ft.Container(
                 content=ft.Row(
@@ -89,6 +93,7 @@ def App(ctx_value: AppContextValue, state: AppState) -> ft.View:
                         on_search=ctx_value.search if state.current_page == "packages" else None,
                         on_toggle_pypi_filter=ctx_value.toggle_pypi_filter,
                         on_navigate_guide=lambda: ctx_value.navigate("guide"),
+                        on_navigate_contribute=lambda: ctx_value.navigate("contribute"),
                         is_dark=state.is_dark,
                         show_logo=state.current_page != "home",
                         show_pypi_only=state.show_pypi_only,

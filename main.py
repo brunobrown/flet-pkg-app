@@ -138,6 +138,8 @@ def main(page: ft.Page) -> None:
             page.run_task(_load_home)
         elif r.page == "guide":
             app_state.current_page = "guide"
+        elif r.page == "contribute":
+            app_state.current_page = "contribute"
         elif r.page == "packages":
             page.run_task(
                 _load_search, r.query, r.sort, r.filter_type, r.official, r.categories, r.page_num

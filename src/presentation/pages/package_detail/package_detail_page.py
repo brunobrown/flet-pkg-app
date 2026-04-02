@@ -396,7 +396,6 @@ def PackageDetailPage(
                                     content=tab_content,
                                     padding=ft.Padding(left=40, top=20, right=40, bottom=20),
                                 ),
-                                AppFooter(),
                             ],
                         ),
                         # Slide-in sidebar panel
@@ -407,6 +406,7 @@ def PackageDetailPage(
                 ),
                 expand=True,
             ),
+            AppFooter(),
         ],
         spacing=0,
         expand=True,
