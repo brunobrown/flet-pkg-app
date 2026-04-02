@@ -156,6 +156,27 @@ def PackageDetailPage(
                 ink=True,
             )
             if pkg.is_verified
+            else ft.Container(
+                content=ft.Row(
+                    controls=[
+                        ft.Icon(ft.Icons.CODE, size=13, color=ft.Colors.ON_SURFACE_VARIANT),
+                        ft.Text("GitHub only", size=10, color=ft.Colors.ON_SURFACE_VARIANT),
+                    ],
+                    spacing=4,
+                    alignment=ft.MainAxisAlignment.CENTER,
+                ),
+                border=ft.Border(
+                    left=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
+                    top=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
+                    right=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
+                    bottom=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
+                ),
+                border_radius=12,
+                padding=ft.Padding(left=8, top=2, right=8, bottom=2),
+                tooltip="Available on GitHub only — not installable via pip",
+                width=100,
+            )
+            if not pkg.pypi_name
             else ft.Container(),
             ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
             _sidebar_section(

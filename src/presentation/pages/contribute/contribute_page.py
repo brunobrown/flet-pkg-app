@@ -91,7 +91,7 @@ def ContributePage() -> ft.Control:
                                         content=ft.Row(
                                             controls=[
                                                 ft.Image(
-                                                    src="/icons/buy-me-a-coffe.png",
+                                                    src="/icons/bmc-button.png",
                                                     width=300,
                                                     height=70,
                                                     fit=ft.BoxFit.COVER,

@@ -112,9 +112,27 @@ def App(ctx_value: AppContextValue, state: AppState, services: list | None = Non
         ],
     )
 
+    def _open_bmc(_e: ft.ControlEvent) -> None:
+        _e.page.run_task(ft.UrlLauncher().launch_url, "https://www.buymeacoffee.com/brunobrown")
+
+    bmc_button = ft.FloatingActionButton(
+        content=ft.Image(
+            src="/icons/bmc-logo-no-background.png",
+            width=28,
+            height=28,
+            fit=ft.BoxFit.CONTAIN,
+        ),
+        bgcolor="#FF5F5F",
+        shape=ft.CircleBorder(),
+        mini=True,
+        tooltip="Buy me a coffee",
+        on_click=_open_bmc,
+    )
+
     view = ft.View(
         controls=content,
         drawer=drawer,
+        floating_action_button=bmc_button,
         padding=0,
         spacing=0,
         bgcolor=ft.Colors.SURFACE_CONTAINER_LOWEST,

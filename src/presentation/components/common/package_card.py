@@ -306,6 +306,34 @@ def _verified_badge() -> ft.Control:
     )
 
 
+def _github_only_badge() -> ft.Control:
+    """GitHub-only badge — indicates the project is not on PyPI."""
+    return ft.Container(
+        content=ft.Row(
+            controls=[
+                ft.Icon(ft.Icons.CODE, size=13, color=ft.Colors.ON_SURFACE_VARIANT),
+                ft.Text(
+                    "GitHub",
+                    size=10,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                ),
+            ],
+            spacing=4,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+        border=ft.Border(
+            left=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
+            top=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
+            right=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
+            bottom=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
+        ),
+        border_radius=12,
+        padding=ft.Padding(left=8, top=2, right=8, bottom=2),
+        tooltip="Available on GitHub only — not installable via pip",
+        width=70,
+    )
+
+
 @ft.component
 def _TopicTag(topic: str, on_search: object = None) -> ft.Control:
     """Clickable hashtag with hover effect (underline + pink)."""
@@ -386,8 +414,6 @@ def PackageCardGrid(
                     overflow=ft.TextOverflow.ELLIPSIS,
                 ),
                 topics_row if package.topics else ft.Container(),
-                _verified_badge() if package.is_verified else ft.Container(),
-                ft.Container(expand=True),
                 ft.Row(
                     controls=[
                         ft.Row(
@@ -400,6 +426,7 @@ def PackageCardGrid(
                                 ),
                             ],
                             spacing=4,
+                            tight=True,
                         ),
                         ft.Row(
                             controls=[
@@ -411,9 +438,18 @@ def PackageCardGrid(
                                 ),
                             ],
                             spacing=4,
+                            tight=True,
                         ),
+                        _verified_badge()
+                        if package.is_verified
+                        else _github_only_badge()
+                        if not package.pypi_name
+                        else ft.Container(),
                     ],
-                    spacing=16,
+                    spacing=12,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    wrap=True,
+                    run_spacing=6,
                 ),
                 ft.Row(
                     controls=[
@@ -436,7 +472,6 @@ def PackageCardGrid(
             ],
             spacing=6,
         ),
-        height=200,
         padding=16,
         border_radius=8,
         bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
