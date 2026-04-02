@@ -58,7 +58,14 @@ def _patch_session_dispatch(session) -> None:
     session.dispatch_event = safe_dispatch
 
 
+# --- Shared singleton: one index/cache for all sessions ---
+_shared_api = ApiService()
+_shared_api_started = False
+
+
 def main(page: ft.Page) -> None:
+    global _shared_api_started
+
     page.title = "Flet PKG - Package Discovery"
     page.theme = get_light_theme()
     page.dark_theme = get_dark_theme()
@@ -69,13 +76,18 @@ def main(page: ft.Page) -> None:
 
     _patch_session_dispatch(page.session)
 
-    # --- Dependency wiring ---
+    # --- Dependency wiring (per-session state, shared api) ---
     app_state = AppState()
-    api = ApiService()
+    api = _shared_api
     pkg_state = app_state.packages
     nav = NavigationService(page)
     prefs = ft.SharedPreferences()
     url_launcher = ft.UrlLauncher()
+
+    # Start index build only once (first session)
+    if not _shared_api_started:
+        _shared_api_started = True
+        page.run_task(api.start_background_tasks)
 
     # --- Load saved preferences ---
     async def _load_preferences() -> None:
@@ -94,9 +106,6 @@ def main(page: ft.Page) -> None:
             val = int(per_page)
             if val in settings.get("PAGE_SIZE_OPTIONS", [10, 25, 50, 100]):
                 pkg_state.per_page = val
-
-    page.run_task(_load_preferences)
-    page.run_task(api.start_background_tasks)
 
     # --- Data loaders ---
     async def _load_home() -> None:
@@ -220,21 +229,9 @@ def main(page: ft.Page) -> None:
         copy_to_clipboard=handle_copy,
     )
 
-    # --- Graceful shutdown ---
-    def _on_disconnect(_e) -> None:
-        try:
-            import asyncio
-
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                loop.create_task(api.close())
-        except Exception:
-            logging.debug("Could not schedule api.close on disconnect")
-
-    page.on_disconnect = _on_disconnect
-
     # --- Initial load + render ---
     page.render_views(App, ctx_value, app_state, [prefs, url_launcher])
+    page.run_task(_load_preferences)
     _handle_route(page.route)
 
 
