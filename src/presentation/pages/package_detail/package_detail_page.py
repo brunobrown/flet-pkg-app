@@ -2,6 +2,7 @@
 
 import flet as ft
 
+from config import settings
 from src.presentation.components.common.footer import AppFooter
 from src.presentation.components.common.loading import ErrorMessage, LoadingIndicator
 from src.presentation.state_management.app_context import AppCtx
@@ -10,7 +11,7 @@ from src.presentation.themes.colors import FLET_PINK
 from src.services.api_service import ApiService
 from src.utils.formatters import format_date, format_number
 from src.utils.text import clean_readme
-from config import settings
+
 
 @ft.component
 def PackageDetailPage(
@@ -21,6 +22,8 @@ def PackageDetailPage(
     on_copy: object,
 ) -> ft.Control:
     ctx = ft.use_context(AppCtx)
+    if ctx is None:
+        return ft.Container()
     active_tab, set_active_tab = ft.use_state(0)
     sidebar_open, set_sidebar_open = ft.use_state(False)
     seal_open, set_seal_open = ft.use_state(False)
@@ -42,6 +45,9 @@ def PackageDetailPage(
 
     pkg = state.detail_package
     if not pkg:
+        # Guard: if loading finished but package is still None, show fallback
+        if not state.detail_loading:
+            return ErrorMessage(f"Package '{package_name}' could not be loaded. Try refreshing.")
         return LoadingIndicator("Loading package details...")
 
     def handle_copy(_e: ft.ControlEvent) -> None:

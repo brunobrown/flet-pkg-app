@@ -29,17 +29,20 @@ from src.presentation.themes.colors import DARK_BG
 from src.services.api_service import ApiService
 
 
-def _patch_session_dispatch(session) -> None:
-    """Gracefully handle events on controls that were replaced during re-render.
+def _patch_session(session) -> None:
+    """Patch Flet session internals for resilience.
 
-    Accesses Flet internal _Session__index (name-mangled). If the attribute
-    is removed in a future Flet version, the patch is skipped safely.
-    Pinned to Flet 0.83.x — verify on every Flet upgrade.
+    1. Gracefully handle events on controls replaced during re-render.
+    2. Protect the updates scheduler from crashing on stale/unmounted controls.
+
+    Accesses Flet internal _Session__index and __updates_scheduler (name-mangled).
+    Pinned to Flet 0.84.x — verify on every Flet upgrade.
     """
+    # --- Patch 1: safe event dispatch ---
     index = getattr(session, "_Session__index", None)
     if index is None:
         logging.warning(
-            "Flet Session.__index not found — _patch_session_dispatch skipped. "
+            "Flet Session.__index not found — _patch_session skipped. "
             "Check compatibility with current Flet version."
         )
         return
@@ -56,6 +59,22 @@ def _patch_session_dispatch(session) -> None:
             logging.debug("Ignored event on detached %s(%s)", type(control).__name__, control_id)
 
     session.dispatch_event = safe_dispatch
+
+    # --- Patch 2: resilient updates scheduler ---
+    # The default scheduler crashes on any non-CancelledError exception
+    # (e.g. RuntimeError from stale/unmounted component.update()).
+    # This kills ALL subsequent UI updates for the session.
+    original_schedule_update = session.schedule_update
+
+    def safe_schedule_update(control):
+        original_schedule_update(control)
+        # Restart scheduler if it crashed (task is done with exception)
+        task = getattr(session, "_Session__updates_task", None)
+        if task and task.done():
+            logging.warning("Updates scheduler was dead — restarting")
+            session.start_updates_scheduler()
+
+    session.schedule_update = safe_schedule_update
 
 
 # --- Shared singleton: one index/cache for all sessions ---
@@ -74,7 +93,7 @@ def main(page: ft.Page) -> None:
     page.padding = 0
     page.spacing = 0
 
-    _patch_session_dispatch(page.session)
+    _patch_session(page.session)
 
     # --- Dependency wiring (per-session state, shared api) ---
     app_state = AppState()
@@ -114,14 +133,23 @@ def main(page: ft.Page) -> None:
             await load_home_data(pkg_state, api, pypi_only=app_state.show_pypi_only)
 
     async def _load_detail(name: str) -> None:
+        logging.debug("[NAV] _load_detail START: %s", name)
         app_state.detail_package_name = name
         pkg_state.detail_package = None
         pkg_state.error = ""
         app_state.current_page = "detail"
         await load_package_detail_by_name(pkg_state, api, name)
-        # Force re-render by touching root observable
-        # (sub-observable changes may not propagate in all cases)
-        app_state.detail_package_name = name
+        logging.debug(
+            "[NAV] _load_detail END: %s (pkg=%s, err=%s, loading=%s)",
+            name,
+            "OK" if pkg_state.detail_package else "None",
+            pkg_state.error or "none",
+            pkg_state.detail_loading,
+        )
+        # Force re-render via manual notify — safe alternative to setting same value
+        # (setting same value is a no-op for @ft.observable __setattr__)
+        pkg_state.notify()
+        app_state.notify()
 
     async def _load_search(
         query: str = "",
@@ -143,9 +171,11 @@ def main(page: ft.Page) -> None:
     # --- Route handling ---
     def _handle_route(route: str) -> None:
         if not nav.should_handle(route):
+            logging.debug("[NAV] Route SKIPPED (dedup): %s", route)
             return
 
         r = parse_route(route)
+        logging.debug("[NAV] Route → %s (page=%s)", route, r.page)
 
         if r.page == "home":
             page.run_task(_load_home)
@@ -213,7 +243,19 @@ def main(page: ft.Page) -> None:
         page.run_task(ft.Clipboard().set, text)
         page.show_dialog(ft.SnackBar(ft.Text(f"Copied: {text}")))
 
+    # --- Reconnection handler ---
+    def _on_reconnect(_e) -> None:
+        """Reset navigation state and reprocess route on WebSocket reconnection.
+
+        Flet clears pending_updates on disconnect, so UI patches may be lost.
+        Re-handling the route forces a fresh data load and re-render.
+        """
+        logging.info("Client reconnected — resetting navigation state")
+        nav.reset()
+        _handle_route(page.route)
+
     # --- URL event handlers ---
+    page.on_connect = _on_reconnect
     page.on_route_change = lambda e: _handle_route(e.route)
     page.on_view_pop = lambda _: _handle_route(page.route)
 
@@ -236,9 +278,4 @@ def main(page: ft.Page) -> None:
 
 
 if __name__ == "__main__":
-    ft.run(
-        main,
-        view=ft.AppView.WEB_BROWSER,
-        assets_dir="assets",
-        port=8001
-    )
+    ft.run(main, view=ft.AppView.WEB_BROWSER, assets_dir="assets", port=8001)

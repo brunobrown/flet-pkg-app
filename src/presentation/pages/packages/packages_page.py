@@ -23,6 +23,8 @@ def PackagesPage(
     on_copy: object,
 ) -> ft.Control:
     ctx = ft.use_context(AppCtx)
+    if ctx is None:
+        return ft.Container()
     filters_open, set_filters_open = ft.use_state(False)
 
     # Derive filter checkbox values from observable state (not use_state)

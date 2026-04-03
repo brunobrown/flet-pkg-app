@@ -1,7 +1,6 @@
 """Package cards — uses ft.Colors.* for theme-aware colors."""
 
 import flet as ft
-from PIL.ImageOps import expand
 
 from config import settings
 from src.domain.entities.package import Package
@@ -39,7 +38,7 @@ def _publisher_link(name: str, size: int = 11) -> ft.Control:
                 ),
             ],
             spacing=4,
-            tight=True
+            tight=True,
         ),
         on_enter=lambda _: set_hovered(True),
         on_exit=lambda _: set_hovered(False),

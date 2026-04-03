@@ -1,9 +1,18 @@
 """Navigation service — encapsulates URL pushing and route deduplication."""
 
+import logging
+import time
+
 import flet as ft
 
 from src.domain.entities.package import SortOption
 from src.presentation.navigation.app_router import build_navigate_url, build_packages_url
+
+logger = logging.getLogger(__name__)
+
+# Minimum interval (seconds) before the same route is re-processed.
+# Prevents double-fire on fast clicks, but allows reconnection re-processing.
+_DEDUP_WINDOW = 2.0
 
 
 class NavigationService:
@@ -12,12 +21,13 @@ class NavigationService:
     Handles:
     - navigate(target): convert target string → URL → push_route
     - sync_and_reload(): update URL from current state + load data
-    - Deduplication: _last_handled_route prevents double-load
+    - Deduplication: _last_handled_route prevents double-load within _DEDUP_WINDOW
     """
 
     def __init__(self, page: ft.Page):
         self._page = page
         self._last_handled_route: str = ""
+        self._last_handled_time: float = 0.0
 
     @property
     def last_handled_route(self) -> str:
@@ -28,11 +38,23 @@ class NavigationService:
         self._last_handled_route = value
 
     def should_handle(self, route: str) -> bool:
-        """Check if this route should be handled (not a duplicate)."""
+        """Check if this route should be handled (not a recent duplicate)."""
+        now = time.monotonic()
         if route == self._last_handled_route:
-            return False
+            elapsed = now - self._last_handled_time
+            if elapsed < _DEDUP_WINDOW:
+                logger.debug("[NAV] Route dedup SKIP: %s (%.1fs ago)", route, elapsed)
+                return False
+            logger.debug("[NAV] Route stale re-process: %s (%.1fs ago)", route, elapsed)
         self._last_handled_route = route
+        self._last_handled_time = now
         return True
+
+    def reset(self) -> None:
+        """Reset deduplication state — used on reconnection."""
+        logger.debug("Navigation state reset")
+        self._last_handled_route = ""
+        self._last_handled_time = 0.0
 
     def push(self, route: str) -> None:
         """Push a URL to the browser history (fires on_route_change)."""
@@ -65,5 +87,6 @@ class NavigationService:
             page_num=page_num,
         )
         self._last_handled_route = url
+        self._last_handled_time = time.monotonic()
         self.push(url)
         return url

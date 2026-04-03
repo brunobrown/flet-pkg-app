@@ -14,6 +14,8 @@ from src.presentation.state_management.app_context import AppCtx
 @ft.component
 def PageContent() -> ft.Control:
     ctx = ft.use_context(AppCtx)
+    if ctx is None:
+        return ft.Container()
     state = ctx.state
     pkg_state = state.packages
 
