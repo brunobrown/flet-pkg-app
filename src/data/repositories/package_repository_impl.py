@@ -245,6 +245,7 @@ class PackageRepositoryImpl(PackageRepository):
             idx_pkgs, _ = self._index.query(text=package_name, pypi_only=False, per_page=1)
             if idx_pkgs and idx_pkgs[0].name == pkg.name:
                 pkg.is_verified = idx_pkgs[0].is_verified
+                pkg.is_new = idx_pkgs[0].is_new
 
         self._cache.set(cache_key, pkg)
         return pkg

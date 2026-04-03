@@ -1,6 +1,7 @@
 # ============================================= [ DEFAULT ] ========================================================= #
 
 [default]
+FLET_PKG_APP_BASE_URL = "https://fletpkg.com"
 
 # --- APIs ---
 GITHUB_API_BASE = "https://api.github.com"
@@ -39,6 +40,9 @@ MAX_RETRIES = 3
 PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 DEFAULT_PER_PAGE = 10
 
+# --- New Package Threshold (days since creation) ---
+NEW_PACKAGE_DAYS = 30
+
 # --- Topics to exclude from card hashtags ---
 EXCLUDED_TOPICS = ["flet", "python", "python3", "flet-dev"]
 
@@ -62,6 +66,7 @@ EXCLUDED_PACKAGES = [
     "flet-desktop",
     "flet-web",
     "flet-runtime",
+    "flet-app-templates"
 ]
 
 # --- Classification Keywords ---

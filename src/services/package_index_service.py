@@ -88,8 +88,9 @@ class PackageIndexService:
             # Enrich with downloads (batch ClickHouse)
             await self._enrich_downloads(all_packages)
 
-            # Calculate verified status
+            # Calculate verified + new status
             self._compute_verified(all_packages)
+            self._compute_new(all_packages)
 
             # Sort by stars (default ranking)
             all_packages.sort(key=lambda p: p.stars, reverse=True)
@@ -183,6 +184,22 @@ class PackageIndexService:
                 verified_count += 1
 
         logger.info("Verified packages: %d/%d", verified_count, len(packages))
+
+    @staticmethod
+    def _compute_new(packages: list[Package]) -> None:
+        """Mark packages created within NEW_PACKAGE_DAYS as new."""
+        from datetime import datetime, timedelta, timezone
+
+        threshold_days = settings.get("NEW_PACKAGE_DAYS", 30)
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=threshold_days)).isoformat()
+        new_count = 0
+
+        for pkg in packages:
+            pkg.is_new = bool(pkg.created_at and pkg.created_at >= cutoff)
+            if pkg.is_new:
+                new_count += 1
+
+        logger.info("New packages: %d/%d (last %d days)", new_count, len(packages), threshold_days)
 
     async def _verify_pypi_and_enrich(self, packages: list[Package]) -> None:
         """Verify PyPI existence for each package. Fill version if found.

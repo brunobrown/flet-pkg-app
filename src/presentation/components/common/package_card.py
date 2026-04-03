@@ -1,6 +1,7 @@
 """Package cards — uses ft.Colors.* for theme-aware colors."""
 
 import flet as ft
+from PIL.ImageOps import expand
 
 from config import settings
 from src.domain.entities.package import Package
@@ -38,6 +39,7 @@ def _publisher_link(name: str, size: int = 11) -> ft.Control:
                 ),
             ],
             spacing=4,
+            tight=True
         ),
         on_enter=lambda _: set_hovered(True),
         on_exit=lambda _: set_hovered(False),
@@ -292,7 +294,7 @@ def _verified_badge() -> ft.Control:
                 ),
             ],
             spacing=4,
-            width=60,
+            tight=True,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
         border=ft.Border(
@@ -303,6 +305,35 @@ def _verified_badge() -> ft.Control:
         ),
         border_radius=12,
         padding=ft.Padding(left=8, top=2, right=8, bottom=2),
+    )
+
+
+def _new_badge() -> ft.Control:
+    """New badge — indicates a recently created package."""
+    return ft.Container(
+        content=ft.Row(
+            controls=[
+                ft.Icon(ft.Icons.FIBER_NEW, size=14, color="#2196F3"),
+                ft.Text(
+                    "New",
+                    size=10,
+                    weight=ft.FontWeight.BOLD,
+                    color="#2196F3",
+                ),
+            ],
+            spacing=4,
+            tight=True,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+        border=ft.Border(
+            left=ft.BorderSide(1, "#2196F3"),
+            top=ft.BorderSide(1, "#2196F3"),
+            right=ft.BorderSide(1, "#2196F3"),
+            bottom=ft.BorderSide(1, "#2196F3"),
+        ),
+        border_radius=12,
+        padding=ft.Padding(left=8, top=2, right=8, bottom=2),
+        tooltip="Recently created package",
     )
 
 
@@ -320,6 +351,7 @@ def _github_only_badge() -> ft.Control:
             ],
             spacing=4,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            tight=True,
         ),
         border=ft.Border(
             left=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
@@ -330,7 +362,7 @@ def _github_only_badge() -> ft.Control:
         border_radius=12,
         padding=ft.Padding(left=8, top=2, right=8, bottom=2),
         tooltip="Available on GitHub only — not installable via pip",
-        width=70,
+        # width=70,
     )
 
 
@@ -440,11 +472,9 @@ def PackageCardGrid(
                             spacing=4,
                             tight=True,
                         ),
-                        _verified_badge()
-                        if package.is_verified
-                        else _github_only_badge()
-                        if not package.pypi_name
-                        else ft.Container(),
+                        _verified_badge() if package.is_verified else ft.Container(),
+                        _new_badge() if package.is_new else ft.Container(),
+                        _github_only_badge() if not package.pypi_name else ft.Container(),
                     ],
                     spacing=12,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -478,6 +508,8 @@ def PackageCardGrid(
         shadow=_CARD_SHADOW,
         border=_NEON_BORDER if hovered else _DEFAULT_BORDER,
         animate=ft.Animation(200, ft.AnimationCurve.EASE_OUT),
+        width=200,
+        height=200,
     )
 
     return ft.GestureDetector(

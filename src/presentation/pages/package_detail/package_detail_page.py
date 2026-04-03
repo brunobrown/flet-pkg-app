@@ -10,7 +10,7 @@ from src.presentation.themes.colors import FLET_PINK
 from src.services.api_service import ApiService
 from src.utils.formatters import format_date, format_number
 from src.utils.text import clean_readme
-
+from config import settings
 
 @ft.component
 def PackageDetailPage(
@@ -61,7 +61,7 @@ def PackageDetailPage(
                 card += f"Publisher: {pkg.publisher}"
             if pkg.license:
                 card += f" | {pkg.license}"
-            card += f"\n/packages/{name}"
+            card += f"\n{settings.FLET_PKG_APP_BASE_URL}/packages/{name}"
             on_copy(card)
 
     def _handle_markdown_link(e: ft.ControlEvent) -> None:
@@ -142,42 +142,76 @@ def PackageDetailPage(
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             ),
-            # Verified seal (clickable)
-            ft.Container(
-                content=ft.Image(
-                    src="/images/verified-badge-1.png",
-                    width=80,
-                    height=80,
-                    fit=ft.BoxFit.CONTAIN,
-                ),
-                alignment=ft.Alignment.CENTER,
-                padding=ft.Padding(left=0, top=8, right=0, bottom=8),
-                on_click=lambda _: set_seal_open(True),
-                ink=True,
-            )
-            if pkg.is_verified
-            else ft.Container(
-                content=ft.Row(
-                    controls=[
-                        ft.Icon(ft.Icons.CODE, size=13, color=ft.Colors.ON_SURFACE_VARIANT),
-                        ft.Text("GitHub only", size=10, color=ft.Colors.ON_SURFACE_VARIANT),
-                    ],
-                    spacing=4,
-                    alignment=ft.MainAxisAlignment.CENTER,
-                ),
-                border=ft.Border(
-                    left=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
-                    top=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
-                    right=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
-                    bottom=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
-                ),
-                border_radius=12,
-                padding=ft.Padding(left=8, top=2, right=8, bottom=2),
-                tooltip="Available on GitHub only — not installable via pip",
-                width=100,
-            )
-            if not pkg.pypi_name
-            else ft.Container(),
+            # Badges: Verified / New / GitHub-only
+            ft.Column(
+                controls=[
+                    ft.Container(
+                        content=ft.Image(
+                            src="/images/verified-badge-1.png",
+                            width=80,
+                            height=80,
+                            fit=ft.BoxFit.CONTAIN,
+                        ),
+                        alignment=ft.Alignment.CENTER,
+                        padding=ft.Padding(left=0, top=8, right=0, bottom=8),
+                        on_click=lambda _: set_seal_open(True),
+                        ink=True,
+                    )
+                    if pkg.is_verified
+                    else ft.Container(),
+                    ft.Container(
+                        content=ft.Row(
+                            controls=[
+                                ft.Icon(ft.Icons.FIBER_NEW, size=16, color="#2196F3"),
+                                ft.Text(
+                                    "New Package",
+                                    size=12,
+                                    weight=ft.FontWeight.BOLD,
+                                    color="#2196F3",
+                                ),
+                            ],
+                            spacing=6,
+                            alignment=ft.MainAxisAlignment.CENTER,
+                            tight=True,
+                        ),
+                        border=ft.Border(
+                            left=ft.BorderSide(1, "#2196F3"),
+                            top=ft.BorderSide(1, "#2196F3"),
+                            right=ft.BorderSide(1, "#2196F3"),
+                            bottom=ft.BorderSide(1, "#2196F3"),
+                        ),
+                        border_radius=12,
+                        padding=ft.Padding(left=10, top=4, right=10, bottom=4),
+                        tooltip="Recently created package",
+                    )
+                    if pkg.is_new
+                    else ft.Container(),
+                    ft.Container(
+                        content=ft.Row(
+                            controls=[
+                                ft.Icon(ft.Icons.CODE, size=13, color=ft.Colors.ON_SURFACE_VARIANT),
+                                ft.Text("GitHub only", size=10, color=ft.Colors.ON_SURFACE_VARIANT),
+                            ],
+                            spacing=4,
+                            alignment=ft.MainAxisAlignment.CENTER,
+                            tight=True,
+                        ),
+                        border=ft.Border(
+                            left=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
+                            top=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
+                            right=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
+                            bottom=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
+                        ),
+                        border_radius=12,
+                        padding=ft.Padding(left=8, top=2, right=8, bottom=2),
+                        tooltip="Available on GitHub only — not installable via pip",
+                    )
+                    if not pkg.pypi_name
+                    else ft.Container(),
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=8,
+            ),
             ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
             _sidebar_section(
                 "Statistics",

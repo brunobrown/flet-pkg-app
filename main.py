@@ -240,4 +240,5 @@ if __name__ == "__main__":
         main,
         view=ft.AppView.WEB_BROWSER,
         assets_dir="assets",
+        port=8001
     )

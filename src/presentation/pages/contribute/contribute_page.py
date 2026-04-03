@@ -91,24 +91,24 @@ def ContributePage() -> ft.Control:
                                         content=ft.Row(
                                             controls=[
                                                 ft.Image(
-                                                    src="/icons/bmc-button.png",
-                                                    width=300,
+                                                    src="/icons/bmc-logo.png",
+                                                    # width=300,
                                                     height=70,
-                                                    fit=ft.BoxFit.COVER,
+                                                    fit=ft.BoxFit.CONTAIN,
                                                 ),
                                             ],
                                             spacing=10,
                                             alignment=ft.MainAxisAlignment.CENTER,
                                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                                         ),
-                                        bgcolor="#FFDD00",
+                                        # bgcolor="#FFDD00",
                                         padding=ft.Padding(left=24, top=12, right=24, bottom=12),
                                         border_radius=12,
                                         on_click=lambda _: _open_url(
                                             "https://www.buymeacoffee.com/brunobrown"
                                         ),
                                         ink=True,
-                                        width=500,
+                                        width=150,
                                     ),
                                     # --- Social Links ---
                                     ft.Container(height=40),
