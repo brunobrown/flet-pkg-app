@@ -208,6 +208,7 @@ __marimo__/
 
 tmp
 .claude
+.planning
 .mcp.json
 
 # Ignore dynaconf secret files

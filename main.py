@@ -8,6 +8,7 @@ Navigation flow (unidirectional):
 """
 
 import logging
+import threading
 
 import flet as ft
 
@@ -38,6 +39,15 @@ def _patch_session(session) -> None:
     Accesses Flet internal _Session__index and __updates_scheduler (name-mangled).
     Pinned to Flet 0.84.x — verify on every Flet upgrade.
     """
+    flet_version = getattr(ft, "version", "unknown")
+    if not str(flet_version).startswith("0.84."):
+        logging.warning(
+            "Flet version %s detected — _patch_session is pinned to 0.84.x. "
+            "Skipping patches. Verify compatibility before re-enabling.",
+            flet_version,
+        )
+        return
+
     # --- Patch 1: safe event dispatch ---
     index = getattr(session, "_Session__index", None)
     if index is None:
@@ -80,6 +90,7 @@ def _patch_session(session) -> None:
 # --- Shared singleton: one index/cache for all sessions ---
 _shared_api = ApiService()
 _shared_api_started = False
+_startup_lock = threading.Lock()
 
 
 def main(page: ft.Page) -> None:
@@ -103,10 +114,11 @@ def main(page: ft.Page) -> None:
     prefs = ft.SharedPreferences()
     url_launcher = ft.UrlLauncher()
 
-    # Start index build only once (first session)
-    if not _shared_api_started:
-        _shared_api_started = True
-        page.run_task(api.start_background_tasks)
+    # Start index build only once (first session) — thread-safe
+    with _startup_lock:
+        if not _shared_api_started:
+            _shared_api_started = True
+            page.run_task(api.start_background_tasks)
 
     # --- Load saved preferences ---
     async def _load_preferences() -> None:
@@ -239,9 +251,23 @@ def main(page: ft.Page) -> None:
             pkg_state.page_number,
         )
 
+    clipboard = ft.Clipboard()
+
     def handle_copy(text: str) -> None:
-        page.run_task(ft.Clipboard().set, text)
+        page.run_task(clipboard.set, text)
         page.show_dialog(ft.SnackBar(ft.Text(f"Copied: {text}")))
+
+    # --- Session close handler ---
+    def _on_close(_e) -> None:
+        """Clean up shared resources when the last session expires."""
+        global _shared_api_started
+        if _shared_api_started:
+            _shared_api_started = False
+            import asyncio
+
+            asyncio.create_task(api.close())
+
+    page.on_close = _on_close
 
     # --- Reconnection handler ---
     def _on_reconnect(_e) -> None:

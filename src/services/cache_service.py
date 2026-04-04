@@ -1,3 +1,4 @@
+import asyncio
 import time
 from collections import OrderedDict
 from typing import Any
@@ -13,6 +14,9 @@ class CacheService:
 
     Entries expire after `ttl` seconds. When `max_entries` is reached,
     the least recently used entry is evicted on write.
+
+    Write operations are protected by an asyncio.Lock to prevent
+    interleaving during concurrent async tasks (e.g., index enrichment).
     """
 
     def __init__(
@@ -23,6 +27,7 @@ class CacheService:
         self._default_ttl = ttl
         self._max_entries = max_entries
         self._store: OrderedDict[str, tuple[Any, float, int]] = OrderedDict()
+        self._lock = asyncio.Lock()
 
     def get(self, key: str) -> Any | None:
         entry = self._store.get(key)
@@ -44,6 +49,11 @@ class CacheService:
         while len(self._store) >= self._max_entries:
             self._store.popitem(last=False)
         self._store[key] = (value, time.time(), ttl if ttl is not None else self._default_ttl)
+
+    async def async_set(self, key: str, value: Any, ttl: int | None = None) -> None:
+        """Thread-safe set for use in concurrent async contexts (e.g., asyncio.gather)."""
+        async with self._lock:
+            self.set(key, value, ttl)
 
     def invalidate(self, key: str) -> None:
         self._store.pop(key, None)

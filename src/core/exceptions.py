@@ -8,9 +8,5 @@ class ApiError(FletPkgError):
         super().__init__(message)
 
 
-class CacheError(FletPkgError):
-    pass
-
-
 class PackageNotFoundError(FletPkgError):
     pass

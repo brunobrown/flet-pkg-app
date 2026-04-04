@@ -52,15 +52,3 @@ class Package:
     def pip_install_command(self) -> str:
         name = self.pypi_name or self.name
         return f"pip install {name}"
-
-    @property
-    def display_stars(self) -> str:
-        from src.utils.formatters import format_number
-
-        return format_number(self.stars)
-
-    @property
-    def display_downloads(self) -> str:
-        from src.utils.formatters import format_number
-
-        return format_number(self.downloads)

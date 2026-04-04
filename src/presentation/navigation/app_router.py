@@ -1,9 +1,12 @@
 """Centralized route definitions, parsing, and URL building."""
 
+import re
 import urllib.parse
 from dataclasses import dataclass, field
 
 from src.domain.entities.package import SortOption
+
+_VALID_PACKAGE_NAME = re.compile(r"^[a-zA-Z0-9._-]+$")
 
 
 def _safe_int(value: str, default: int = 0) -> int:
@@ -73,7 +76,7 @@ def parse_route(route: str) -> ParsedRoute:
 
     if path.startswith("packages/"):
         name = path.split("/", 1)[1]
-        if name:
+        if name and _VALID_PACKAGE_NAME.match(name):
             return ParsedRoute(page="detail", package_name=name)
         return ParsedRoute(page="packages")
 

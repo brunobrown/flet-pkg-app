@@ -276,13 +276,13 @@ class PackageIndexService:
         if official_only:
             result = [p for p in result if p.is_official]
 
-        # Filter: package type
-        if package_type == "Services":
-            result = [p for p in result if p.package_type == PackageType.SERVICE]
-        elif package_type == "UI Controls":
-            result = [p for p in result if p.package_type == PackageType.UI_CONTROL]
-        elif package_type == "Python Package":
-            result = [p for p in result if p.package_type == PackageType.PYTHON_PACKAGE]
+        # Filter: package type (accept string or PackageType enum)
+        if package_type:
+            try:
+                pt = PackageType(package_type) if isinstance(package_type, str) else package_type
+                result = [p for p in result if p.package_type == pt]
+            except ValueError:
+                pass  # Unknown type string — skip filter
 
         # Filter: categories (match any topic in the category's topic list)
         if categories:

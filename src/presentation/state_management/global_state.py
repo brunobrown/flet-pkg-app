@@ -34,7 +34,6 @@ class PackagesState:
     # Detail
     detail_package: Package | None = None
     detail_loading: bool = False
-    detail_package_name: str = ""
 
 
 @ft.observable

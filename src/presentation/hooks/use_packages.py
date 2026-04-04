@@ -1,11 +1,24 @@
 """Hooks that bridge presentation state with domain use cases."""
 
+import logging
+
+from src.core.exceptions import PackageNotFoundError
 from src.domain.usecases.get_home_data import GetHomeDataUseCase
 from src.domain.usecases.get_package_detail import GetPackageDetailUseCase
 from src.domain.usecases.search_packages import SearchPackagesUseCase
 from src.domain.usecases.star_package import StarPackageUseCase
 from src.presentation.state_management.global_state import PackagesState, UserState
 from src.services.api_service import ApiService
+
+logger = logging.getLogger(__name__)
+
+
+def _user_error(e: Exception) -> str:
+    """Convert exception to user-friendly message, logging the original."""
+    logger.warning("Operation failed: %s", e)
+    if isinstance(e, PackageNotFoundError):
+        return "Package not found."
+    return "Something went wrong. Please try again."
 
 
 async def load_home_data(state: PackagesState, api: ApiService, pypi_only: bool = True) -> None:
@@ -15,7 +28,7 @@ async def load_home_data(state: PackagesState, api: ApiService, pypi_only: bool 
         use_case = GetHomeDataUseCase(api.repository)
         state.home_data = await use_case.execute(pypi_only=pypi_only)
     except Exception as e:
-        state.error = str(e)
+        state.error = _user_error(e)
     finally:
         state.home_loading = False
 
@@ -46,7 +59,7 @@ async def search_packages(
         state.packages = packages
         state.total_count = total
     except Exception as e:
-        state.error = str(e)
+        state.error = _user_error(e)
         state.packages = []
         state.total_count = 0
     finally:
@@ -57,13 +70,12 @@ async def load_package_detail_by_name(
     state: PackagesState, api: ApiService, package_name: str
 ) -> None:
     state.detail_loading = True
-    state.detail_package_name = package_name
     state.error = ""
     try:
         use_case = GetPackageDetailUseCase(api.repository)
         state.detail_package = await use_case.execute_by_name(package_name)
     except Exception as e:
-        state.error = str(e)
+        state.error = _user_error(e)
         state.detail_package = None
     finally:
         state.detail_loading = False

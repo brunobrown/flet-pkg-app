@@ -263,10 +263,6 @@ class PackageRepositoryImpl(PackageRepository):
                     pkg = github_repo_to_package(item)
                     pkg.package_type = classify_by_summary(pkg.description, pkg.name)
                     return pkg
-            if items:
-                pkg = github_repo_to_package(items[0])
-                pkg.package_type = classify_by_summary(pkg.description, pkg.name)
-                return pkg
         except Exception:
             logger.warning("GitHub search failed for %s", package_name)
         return None
