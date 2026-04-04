@@ -543,6 +543,17 @@ def _sidebar_section(title: str, controls: list[ft.Control]) -> ft.Control:
 
 def _like_button(pkg) -> ft.Control:
     """LIKE button with gradient, heart icon, arrow, and count badge."""
+    if pkg.is_official:
+        star_url = "https://github.com/flet-dev/flet/stargazers"
+    elif pkg.repository_url:
+        star_url = f"{pkg.repository_url}/stargazers"
+    else:
+        star_url = ""
+
+    def _open_star(e: ft.Event) -> None:
+        if star_url:
+            e.page.run_task(ft.UrlLauncher().launch_url, star_url)
+
     return ft.Container(
         content=ft.Row(
             controls=[
@@ -555,7 +566,7 @@ def _like_button(pkg) -> ft.Control:
                             height=6,
                             bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
                             rotate=ft.Rotate(0.785),
-                            margin=ft.Margin(left=0, top=0, right=0, bottom=2),
+                            margin=ft.Margin(left=5, top=5, right=-2, bottom=11),
                         ),
                         ft.Container(
                             content=ft.Text(
@@ -588,6 +599,9 @@ def _like_button(pkg) -> ft.Control:
             end=ft.Alignment.CENTER_RIGHT,
             colors=["#ee3167", "#5673b0", "#5abae7"],
         ),
+        on_click=_open_star,
+        tooltip="Star on GitHub",
+        ink=True,
     )
 
 
