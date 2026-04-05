@@ -25,9 +25,12 @@ def AppHeader(
     theme_icon = ft.Icons.LIGHT_MODE_OUTLINED if is_dark else ft.Icons.DARK_MODE_OUTLINED
 
     def handle_search_submit(e: ft.ControlEvent) -> None:
-        text = e.data or query
-        if on_search and text:
+        text = e.data if e.data is not None else query
+        if on_search:
             on_search(text)
+
+    def handle_clear(_e: ft.ControlEvent) -> None:
+        set_query("")
 
     # --- Desktop header ---
     if show_logo:
@@ -69,6 +72,18 @@ def AppHeader(
                             cursor_color=ft.Colors.PRIMARY,
                             text_size=14,
                             prefix_icon=ft.Icons.SEARCH,
+                            suffix=ft.Container(
+                                content=ft.Icon(
+                                    ft.Icons.CLOSE,
+                                    size=16,
+                                    color=ft.Colors.ON_SURFACE_VARIANT,
+                                ),
+                                on_click=handle_clear,
+                                ink=True,
+                                tooltip="Clear search",
+                            )
+                            if query
+                            else None,
                             height=42,
                             bgcolor=ft.Colors.SURFACE_CONTAINER,
                             hint_style=ft.TextStyle(color=ft.Colors.ON_SURFACE_VARIANT),
@@ -173,6 +188,18 @@ def AppHeader(
                             cursor_color=ft.Colors.PRIMARY,
                             text_size=14,
                             prefix_icon=ft.Icons.SEARCH,
+                            suffix=ft.Container(
+                                content=ft.Icon(
+                                    ft.Icons.CLOSE,
+                                    size=16,
+                                    color=ft.Colors.ON_SURFACE_VARIANT,
+                                ),
+                                on_click=handle_clear,
+                                ink=True,
+                                tooltip="Clear search",
+                            )
+                            if query
+                            else None,
                             height=42,
                             bgcolor=ft.Colors.SURFACE_CONTAINER,
                             hint_style=ft.TextStyle(color=ft.Colors.ON_SURFACE_VARIANT),

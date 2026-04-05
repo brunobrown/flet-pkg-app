@@ -1,0 +1,15 @@
+.git
+.gitignore
+.idea
+.venv
+.ruff_cache
+.pytest_cache
+.planning
+__pycache__
+tmp
+tests
+*.pyc
+*.pyo
+.env
+.secrets.toml
+.claude

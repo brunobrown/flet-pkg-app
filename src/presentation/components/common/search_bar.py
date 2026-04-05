@@ -8,9 +8,12 @@ def HeroSearchBar(on_search: object) -> ft.Control:
     query, set_query = ft.use_state("")
 
     def handle_search_submit(e: ft.ControlEvent) -> None:
-        text = e.data or query
-        if on_search and text:
+        text = e.data if e.data is not None else query
+        if on_search:
             on_search(text)
+
+    def handle_clear(_e: ft.ControlEvent) -> None:
+        set_query("")
 
     return ft.Container(
         content=ft.Column(
@@ -50,6 +53,14 @@ def HeroSearchBar(on_search: object) -> ft.Control:
                         cursor_color=ft.Colors.WHITE,
                         text_size=18,
                         prefix_icon=ft.Icons.SEARCH,
+                        suffix=ft.Container(
+                            content=ft.Icon(ft.Icons.CLOSE, size=18, color="#9eafc0"),
+                            on_click=handle_clear,
+                            ink=True,
+                            tooltip="Clear search",
+                        )
+                        if query
+                        else None,
                         bgcolor="#3d4557",
                         hint_style=ft.TextStyle(color="#9eafc0"),
                         color=ft.Colors.WHITE,

@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: flet-pkg
+    runtime: docker
+    plan: free
+    region: oregon
+    healthCheckPath: /
+    envVars:
+      - key: GITHUB_TOKEN
+        sync: false  # Set manually in Render dashboard
+      - key: SET_VAR_DYNACONF_FLET_PKG_APP_BASE_URL
+        value: https://flet-pkg.onrender.com
