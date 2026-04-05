@@ -1,4 +1,5 @@
-# Flet PKG
+<p align="center"><img src="https://github.com/user-attachments/assets/44544baa-5660-4cff-96ce-5c24471331b2" alt="Flet PKG"></p>
+
 **Package discovery platform for the Flet ecosystem. Search, explore, and share Flet packages and extensions — all data aggregated from GitHub, PyPI, and ClickHouse in one place.**
 
 ![Python](https://img.shields.io/badge/python-3.12+-3776AB?logo=python&logoColor=white)
