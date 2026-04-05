@@ -6,6 +6,7 @@ from src.data.sources.package_discovery import PackageDiscovery
 from src.data.sources.pypi_source import PyPISource
 from src.domain.repositories.package_repository import PackageRepository
 from src.services.cache_service import CacheService
+from src.services.local_index_cache import LocalIndexCache
 from src.services.package_index_service import PackageIndexService
 
 
@@ -19,12 +20,14 @@ class ApiService:
         self._cache = CacheService(ttl=settings.CACHE_TTL_SECONDS)
 
         self._discovery = PackageDiscovery(self._github_source, self._pypi_source, self._cache)
+        self._local_cache = LocalIndexCache()
         self._index = PackageIndexService(
             discovery=self._discovery,
             github=self._github_source,
             pypi=self._pypi_source,
             clickhouse=self._clickhouse_source,
             cache=self._cache,
+            local_cache=self._local_cache,
         )
         self._repository = PackageRepositoryImpl(
             github_source=self._github_source,

@@ -14,6 +14,7 @@ from src.data.sources.package_discovery import PackageDiscovery
 from src.data.sources.pypi_source import PyPISource
 from src.domain.entities.package import Package, PackageType, SortOption
 from src.services.cache_service import CacheService
+from src.services.local_index_cache import LocalIndexCache
 
 logger = get_logger(__name__)
 
@@ -33,12 +34,14 @@ class PackageIndexService:
         pypi: PyPISource,
         clickhouse: ClickHouseSource,
         cache: CacheService,
+        local_cache: LocalIndexCache | None = None,
     ):
         self._discovery = discovery
         self._github = github
         self._pypi = pypi
         self._ch = clickhouse
         self._cache = cache
+        self._local_cache = local_cache
         self._packages: list[Package] = []
         self._official_names: set[str] = set()
         self._ready = asyncio.Event()
@@ -101,6 +104,10 @@ class PackageIndexService:
             self._ready.set()
 
             logger.info("Package index built: %d packages", len(all_packages))
+
+            # Persist to local cache for instant startup next time
+            if self._local_cache:
+                self._local_cache.save(all_packages)
         except Exception:
             logger.exception("Failed to build package index")
             if not self._ready.is_set() and not self._packages:
@@ -230,8 +237,26 @@ class PackageIndexService:
     # --- Lifecycle ---
 
     async def start(self) -> None:
-        """Build index and start background re-indexing loop."""
-        await self.build_index()
+        """Build index and start background re-indexing loop.
+
+        If a fresh local cache exists, loads it instantly so the UI is
+        ready in milliseconds, then re-indexes in background.
+        """
+        loaded_from_cache = False
+        if self._local_cache:
+            cached = self._local_cache.load()
+            if cached:
+                self._packages = cached
+                self._ready.set()
+                loaded_from_cache = True
+                logger.info("Serving %d packages from local cache", len(cached))
+
+        if loaded_from_cache:
+            # Re-index in background (stale-while-revalidate)
+            asyncio.create_task(self.build_index())
+        else:
+            await self.build_index()
+
         interval = settings.get("INDEX_REINDEX_INTERVAL", 3600)
         self._reindex_task = asyncio.create_task(self._reindex_loop(interval))
 
