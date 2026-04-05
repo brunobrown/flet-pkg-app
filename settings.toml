@@ -1,7 +1,7 @@
 # ============================================= [ DEFAULT ] ========================================================= #
 
 [default]
-FLET_PKG_APP_BASE_URL = "https://fletpkg.com"
+FLET_PKG_APP_BASE_URL = "https://flet-pkg-app.onrender.com"
 
 # --- APIs ---
 GITHUB_API_BASE = "https://api.github.com"
