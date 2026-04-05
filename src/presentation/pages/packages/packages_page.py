@@ -318,6 +318,18 @@ def PackagesPage(
                             ],
                             padding=ft.Padding(left=20, top=0, right=20, bottom=0),
                         ),
+                        # Backdrop (closes filter on outside click)
+                        ft.Container(
+                            bgcolor=ft.Colors.with_opacity(0.3, ft.Colors.BLACK),
+                            left=0,
+                            top=0,
+                            right=0,
+                            bottom=0,
+                            on_click=lambda _: set_filters_open(False),
+                            visible=filters_open,
+                            animate_opacity=ft.Animation(200, ft.AnimationCurve.EASE_IN_OUT),
+                            opacity=1 if filters_open else 0,
+                        ),
                         # Slide-in filter panel
                         filter_panel,
                         # Toggle tab
