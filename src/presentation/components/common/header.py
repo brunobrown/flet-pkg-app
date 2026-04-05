@@ -244,6 +244,13 @@ def _help_menu(
                 on_click=lambda _: on_navigate_guide() if on_navigate_guide else None,
             ),
             ft.PopupMenuItem(
+                content="Documentation",
+                on_click=lambda _: ft.context.page.run_task(
+                    ft.UrlLauncher().launch_url,
+                    "https://brunobrown.github.io/flet-pkg-app/",
+                ),
+            ),
+            ft.PopupMenuItem(
                 content="Support & Contribute",
                 on_click=lambda _: on_navigate_contribute() if on_navigate_contribute else None,
             ),

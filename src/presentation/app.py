@@ -24,11 +24,24 @@ def App(ctx_value: AppContextValue, state: AppState, services: list | None = Non
                 ref.page.run_task(ref.show_drawer)
 
     # Drawer (mobile)
+    def _open_docs() -> None:
+        ft.context.page.run_task(
+            ft.UrlLauncher().launch_url,
+            "https://brunobrown.github.io/flet-pkg-app/",
+        )
+
+    def _close_drawer() -> None:
+        if view_ref.current and view_ref.current.page:
+            view_ref.current.page.run_task(view_ref.current.close_drawer)
+
     def on_drawer_change(e: ft.ControlEvent) -> None:
         index = e.control.selected_index
+        _close_drawer()
         if index == 0:  # Developer Guide
             ctx_value.navigate("guide")
-        elif index == 1:  # Support & Contribute
+        elif index == 1:  # Documentation
+            _open_docs()
+        elif index == 2:  # Support & Contribute
             ctx_value.navigate("contribute")
 
     drawer = ft.NavigationDrawer(
@@ -53,6 +66,7 @@ def App(ctx_value: AppContextValue, state: AppState, services: list | None = Non
             ),
             ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
             ft.NavigationDrawerDestination(label="Developer Guide", icon=ft.Icons.MENU_BOOK),
+            ft.NavigationDrawerDestination(label="Documentation", icon=ft.Icons.ARTICLE_OUTLINED),
             ft.NavigationDrawerDestination(
                 label="Support & Contribute", icon=ft.Icons.FAVORITE_OUTLINE
             ),

@@ -195,6 +195,29 @@ def ContributePage() -> ft.Control:
                                         ink=True,
                                         padding=ft.Padding(left=0, top=4, right=0, bottom=4),
                                     ),
+                                    ft.Container(
+                                        content=ft.Row(
+                                            controls=[
+                                                ft.Icon(
+                                                    ft.Icons.ARTICLE_OUTLINED,
+                                                    size=18,
+                                                    color=ft.Colors.PRIMARY,
+                                                ),
+                                                ft.Text(
+                                                    "Documentation",
+                                                    size=14,
+                                                    color=ft.Colors.PRIMARY,
+                                                    weight=ft.FontWeight.W_500,
+                                                ),
+                                            ],
+                                            spacing=8,
+                                        ),
+                                        on_click=lambda _: _open_url(
+                                            "https://brunobrown.github.io/flet-pkg-app/"
+                                        ),
+                                        ink=True,
+                                        padding=ft.Padding(left=0, top=4, right=0, bottom=4),
+                                    ),
                                     ft.Container(height=20),
                                 ],
                                 spacing=0,
