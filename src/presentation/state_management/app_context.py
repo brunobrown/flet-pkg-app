@@ -23,4 +23,4 @@ class AppContextValue:
     copy_to_clipboard: Callable[[str], None]
 
 
-AppCtx: ft.ContextProvider[AppContextValue] = ft.create_context(None)
+AppCtx = ft.create_context(None)
