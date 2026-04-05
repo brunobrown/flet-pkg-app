@@ -21,10 +21,14 @@ settings = Dynaconf(
             must_exist=True,
             messages={
                 "must_exist_true": (
-                    f"Missing required configuration: {required_variables}. "
-                    "Define them in settings.toml (public config) or .secrets.toml "
-                    "(sensitive values like API tokens). "
-                    "See https://dynaconf.com for configuration details."
+                    f"Missing required configuration: {required_variables}.\n"
+                    "\n"
+                    "Create a .secrets.toml file in the project root:\n"
+                    "\n"
+                    "  [default]\n"
+                    '  GITHUB_TOKEN = "ghp_your_personal_access_token_here"\n'
+                    "\n"
+                    "Docs: https://dynaconf.com"
                 )
             },
         )
