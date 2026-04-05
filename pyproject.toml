@@ -7,6 +7,8 @@ dependencies = [
     "dynaconf>=3.2.13",
     "flet>=0.84.0",
     "httpx>=0.28.1",
+    "rich>=14.3.3",
+    "structlog>=25.5.0",
 ]
 
 [dependency-groups]

@@ -213,3 +213,8 @@ tmp
 
 # Ignore dynaconf secret files
 .secrets.*
+
+# Docusaurus
+docs/node_modules/
+docs/build/
+docs/.docusaurus/

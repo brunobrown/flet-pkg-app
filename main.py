@@ -13,6 +13,7 @@ import threading
 import flet as ft
 
 from config import settings
+from src.core.logger import configure_logging
 from src.domain.entities.package import SortOption
 from src.presentation.app import App
 from src.presentation.hooks.use_packages import (
@@ -29,6 +30,8 @@ from src.presentation.themes.app_theme import get_dark_theme, get_light_theme
 from src.presentation.themes.colors import DARK_BG
 from src.services.api_service import ApiService
 
+configure_logging()
+
 
 def _patch_session(session) -> None:
     """Patch Flet session internals for resilience.
@@ -39,7 +42,7 @@ def _patch_session(session) -> None:
     Accesses Flet internal _Session__index and __updates_scheduler (name-mangled).
     Pinned to Flet 0.84.x — verify on every Flet upgrade.
     """
-    flet_version = getattr(ft, "version", "unknown")
+    flet_version = getattr(ft, "__version__", "unknown")
     if not str(flet_version).startswith("0.84."):
         logging.warning(
             "Flet version %s detected — _patch_session is pinned to 0.84.x. "
@@ -257,17 +260,9 @@ def main(page: ft.Page) -> None:
         page.run_task(clipboard.set, text)
         page.show_dialog(ft.SnackBar(ft.Text(f"Copied: {text}")))
 
-    # --- Session close handler ---
-    def _on_close(_e) -> None:
-        """Clean up shared resources when the last session expires."""
-        global _shared_api_started
-        if _shared_api_started:
-            _shared_api_started = False
-            import asyncio
-
-            asyncio.create_task(api.close())
-
-    page.on_close = _on_close
+    # Note: ApiService is a singleton shared across all sessions.
+    # Do NOT close it on session disconnect — the re-index loop and
+    # other sessions still need the httpx clients.
 
     # --- Reconnection handler ---
     def _on_reconnect(_e) -> None:
