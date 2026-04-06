@@ -67,7 +67,7 @@ def parse_route(route: str) -> ParsedRoute:
         return ParsedRoute(
             page="packages",
             query=params.get("q", ""),
-            sort=params.get("sort", SortOption.DEFAULT),
+            sort=params.get("sort", SortOption.DEFAULT).lower(),
             filter_type=TYPE_URL_TO_DOMAIN.get(params.get("type", "")),
             official=params.get("official", "") == "true",
             categories=categories,

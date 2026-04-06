@@ -46,6 +46,8 @@ def PackagesPage(
         ctx.reload_packages()
 
     def handle_sort_change(sort_value: str) -> None:
+        if sort_value == state.sort_by:
+            return
         state.sort_by = sort_value
         state.page_number = 1
         ctx.reload_packages()
