@@ -299,4 +299,4 @@ def main(page: ft.Page) -> None:
 
 
 if __name__ == "__main__":
-    ft.run(main, view=ft.AppView.WEB_BROWSER, assets_dir="assets", port=8001)
+    ft.run(main, assets_dir="assets")
