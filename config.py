@@ -2,16 +2,16 @@ from dynaconf import Dynaconf, Validator
 
 # Required configuration variables that must be defined before the app starts.
 # See: https://www.dynaconf.com/validation/
-required_variables = [
+_required_variables = [
     "GITHUB_TOKEN",
 ]
 
 _validators = Validator(
-    *required_variables,
+    *_required_variables,
     must_exist=True,
     messages={
         "must_exist_true": (
-            f"Missing required configuration: {required_variables}.\n"
+            f"Missing required configuration: {_required_variables}.\n"
             "\n"
             "Create a .secrets.toml file in the project root:\n"
             "\n"
