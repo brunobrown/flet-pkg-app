@@ -278,13 +278,13 @@ def main(page: ft.Page) -> None:
     # --- URL event handlers ---
     page.on_connect = _on_reconnect
     page.on_route_change = lambda e: _handle_route(e.route)
-    page.on_view_pop = lambda _: _handle_route(page.route)
 
     # --- Context ---
     ctx_value = AppContextValue(
         state=app_state,
         api=api,
         navigate=handle_navigate,
+        go_back=nav.go_back,
         toggle_theme=handle_theme_toggle,
         toggle_pypi_filter=handle_pypi_filter_toggle,
         search=handle_search,

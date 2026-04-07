@@ -1,6 +1,10 @@
-"""Root App component — returns ft.View with appbar, drawer, and page content.
+"""Root layout — shared View with drawer, appbar, and page content.
 
-Used with page.render_views(App, ctx_value).
+This is the main layout component of the application, equivalent to a shared
+Scaffold in Flutter. It wraps all screens with a common structure: navigation
+drawer, header (AppBar), page content area, and floating action button.
+
+Used with page.render_views(App, ctx_value, app_state, services).
 """
 
 import flet as ft
@@ -94,24 +98,33 @@ def App(ctx_value: AppContextValue, state: AppState, services: list | None = Non
         selected_index=-1,
     )
 
-    # Content wrapped in context provider
+    # Content wrapped in context provider.
+    # SafeArea wraps only the header to avoid status bar overlap on mobile,
+    # while keeping the scrollable page content unaffected.
     content = AppCtx(
         ctx_value,
         lambda: [
             ft.Column(
                 controls=[
-                    AppHeader(
-                        on_theme_toggle=ctx_value.toggle_theme,
-                        on_open_drawer=open_drawer,
-                        on_navigate_home=lambda: ctx_value.navigate("home"),
-                        on_search=ctx_value.search if state.current_page == "packages" else None,
-                        on_toggle_pypi_filter=ctx_value.toggle_pypi_filter,
-                        on_navigate_guide=lambda: ctx_value.navigate("guide"),
-                        on_navigate_contribute=lambda: ctx_value.navigate("contribute"),
-                        is_dark=state.is_dark,
-                        show_logo=state.current_page != "home",
-                        show_pypi_only=state.show_pypi_only,
-                        search_query=state.packages.search_query,
+                    ft.SafeArea(
+                        content=ft.Container(
+                            content=AppHeader(
+                                on_theme_toggle=ctx_value.toggle_theme,
+                                on_open_drawer=open_drawer,
+                                on_navigate_home=lambda: ctx_value.navigate("home"),
+                                on_search=ctx_value.search
+                                if state.current_page == "packages"
+                                else None,
+                                on_toggle_pypi_filter=ctx_value.toggle_pypi_filter,
+                                on_navigate_guide=lambda: ctx_value.navigate("guide"),
+                                on_navigate_contribute=lambda: ctx_value.navigate("contribute"),
+                                is_dark=state.is_dark,
+                                show_logo=state.current_page != "home",
+                                show_pypi_only=state.show_pypi_only,
+                                search_query=state.packages.search_query,
+                            ),
+                        ),
+                        avoid_intrusions_bottom=False,
                     ),
                     ft.Container(
                         content=PageContent(),
@@ -143,6 +156,16 @@ def App(ctx_value: AppContextValue, state: AppState, services: list | None = Non
         on_click=_open_bmc,
     )
 
+    async def _on_confirm_pop(e: ft.ControlEvent) -> None:
+        """Handle Android back button: navigate back or allow exit at root."""
+        previous = ctx_value.go_back()
+        if previous is not None:
+            # Had history — cancel the pop (stay in app, navigate back)
+            await e.control.confirm_pop(False)
+        else:
+            # No history (at root) — allow default behavior (minimize/exit)
+            await e.control.confirm_pop(True)
+
     view = ft.View(
         controls=content,
         drawer=drawer,
@@ -151,6 +174,8 @@ def App(ctx_value: AppContextValue, state: AppState, services: list | None = Non
         spacing=0,
         bgcolor=ft.Colors.SURFACE_CONTAINER_LOWEST,
         services=services or [],
+        can_pop=False,
+        on_confirm_pop=_on_confirm_pop,
     )
 
     view_ref.current = view

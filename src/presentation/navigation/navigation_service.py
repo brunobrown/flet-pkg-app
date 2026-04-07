@@ -16,11 +16,11 @@ _DEDUP_WINDOW = 2.0
 
 
 class NavigationService:
-    """Manages browser URL navigation with deduplication.
+    """Manages browser URL navigation with deduplication and history.
 
     Handles:
     - navigate(target): convert target string → URL → push_route
-    - sync_and_reload(): update URL from current state + load data
+    - go_back(): pop to previous route (Android back button)
     - Deduplication: _last_handled_route prevents double-load within _DEDUP_WINDOW
     """
 
@@ -28,6 +28,8 @@ class NavigationService:
         self._page = page
         self._last_handled_route: str = ""
         self._last_handled_time: float = 0.0
+        self._history: list[str] = []
+        self._going_back: bool = False
 
     @property
     def last_handled_route(self) -> str:
@@ -46,15 +48,30 @@ class NavigationService:
                 logger.debug("[NAV] Route dedup SKIP: %s (%.1fs ago)", route, elapsed)
                 return False
             logger.debug("[NAV] Route stale re-process: %s (%.1fs ago)", route, elapsed)
+        # Track history for back navigation — skip when navigating back
+        if not self._going_back and self._last_handled_route and self._last_handled_route != route:
+            self._history.append(self._last_handled_route)
+        self._going_back = False
         self._last_handled_route = route
         self._last_handled_time = now
         return True
 
+    def go_back(self) -> str | None:
+        """Pop to previous route. Returns the route or None if at root."""
+        if not self._history:
+            return None
+        previous = self._history.pop()
+        logger.debug("[NAV] go_back → %s", previous)
+        self._going_back = True
+        self.push(previous)
+        return previous
+
     def reset(self) -> None:
-        """Reset deduplication state — used on reconnection."""
+        """Reset deduplication and history state — used on reconnection."""
         logger.debug("Navigation state reset")
         self._last_handled_route = ""
         self._last_handled_time = 0.0
+        self._history.clear()
 
     def push(self, route: str) -> None:
         """Push a URL to the browser history (fires on_route_change)."""

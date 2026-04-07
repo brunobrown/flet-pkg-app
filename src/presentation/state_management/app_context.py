@@ -16,6 +16,7 @@ class AppContextValue:
     state: AppState
     api: ApiService
     navigate: Callable[[str], None]
+    go_back: Callable[[], str | None]
     toggle_theme: Callable[[], None]
     toggle_pypi_filter: Callable[[], None]
     search: Callable[[str], None]
