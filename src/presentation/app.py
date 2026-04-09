@@ -9,11 +9,13 @@ Used with page.render_views(App, ctx_value, app_state, services).
 
 import flet as ft
 
+from config import settings
 from src.presentation.components.common.header import AppHeader
 from src.presentation.pages.page_content import PageContent
 from src.presentation.state_management.app_context import AppContextValue, AppCtx
 from src.presentation.state_management.global_state import AppState
 from src.presentation.themes.colors import FLET_PINK
+from src.services.ads_service import is_ads_supported
 
 
 @ft.component
@@ -93,9 +95,117 @@ def App(ctx_value: AppContextValue, state: AppState, services: list | None = Non
                 ),
                 padding=ft.Padding(left=16, top=4, right=16, bottom=4),
             ),
-        ],
+        ]
+        + (
+            [
+                ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
+                # Footer links moved to drawer on mobile (hidden from footer near ads)
+                ft.Container(
+                    content=ft.Row(
+                        controls=[
+                            ft.IconButton(
+                                icon=ft.Icons.CHAT_BUBBLE_OUTLINE,
+                                icon_color=ft.Colors.ON_SURFACE_VARIANT,
+                                icon_size=18,
+                                url=settings.get("FOOTER_LINKS", {}).get("discord", ""),
+                                tooltip="Discord",
+                            ),
+                            ft.IconButton(
+                                icon=ft.Icons.CODE,
+                                icon_color=ft.Colors.ON_SURFACE_VARIANT,
+                                icon_size=18,
+                                url=settings.get("FOOTER_LINKS", {}).get("github", ""),
+                                tooltip="GitHub",
+                            ),
+                            ft.IconButton(
+                                icon=ft.Icons.ARTICLE_OUTLINED,
+                                icon_color=ft.Colors.ON_SURFACE_VARIANT,
+                                icon_size=18,
+                                url=settings.get("FOOTER_LINKS", {}).get("blog", ""),
+                                tooltip="Blog",
+                            ),
+                            ft.IconButton(
+                                icon=ft.Icons.SUPPORT,
+                                icon_color=ft.Colors.ON_SURFACE_VARIANT,
+                                icon_size=18,
+                                url=settings.get("FOOTER_LINKS", {}).get("support", ""),
+                                tooltip="Support",
+                            ),
+                        ],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=0,
+                    ),
+                    padding=ft.Padding(left=8, top=4, right=8, bottom=4),
+                ),
+                # Dynamic spacer: push BMC button to bottom of drawer
+                ft.Container(
+                    height=max(0, (ft.context.page.height or 800) - 500),
+                ),
+                ft.Container(
+                    content=ft.Container(
+                        content=ft.Image(
+                            src="/icons/bmc-logo-no-background.png",
+                            width=26,
+                            height=26,
+                            fit=ft.BoxFit.CONTAIN,
+                        ),
+                        width=48,
+                        height=48,
+                        bgcolor="#FFDD00",
+                        border_radius=24,
+                        alignment=ft.Alignment.CENTER,
+                    ),
+                    alignment=ft.Alignment.BOTTOM_RIGHT,
+                    padding=ft.Padding(left=0, top=0, right=16, bottom=16),
+                    on_click=lambda _: ft.context.page.run_task(
+                        ft.UrlLauncher().launch_url,
+                        "https://www.buymeacoffee.com/brunobrown",
+                    ),
+                ),
+            ]
+            if is_ads_supported()
+            else []
+        ),
         bgcolor=ft.Colors.SURFACE_CONTAINER,
         selected_index=-1,
+    )
+
+    # Persistent bottom banner ad — created once, reused across renders (mobile only)
+    def _create_bottom_banner():
+        if not is_ads_supported():
+            return None
+        from flet_ads import BannerAd
+
+        platform = ft.context.page.platform
+        unit_id = (
+            settings.get("ADS_BANNER", {}).get("ios", "")
+            if platform == ft.PagePlatform.IOS
+            else settings.get("ADS_BANNER", {}).get("android", "")
+        )
+        if not unit_id:
+            return None
+        import logging
+
+        logger = logging.getLogger(__name__)
+        return BannerAd(
+            unit_id=unit_id,
+            width=320,
+            height=50,
+            on_load=lambda e: logger.info("[ADS] Banner loaded OK"),
+            on_error=lambda e: logger.warning("[ADS] Banner error: %s", e.data),
+        )
+
+    bottom_banner = ft.use_memo(_create_bottom_banner, [])
+
+    # Bottom banner container (centered, visible on mobile only)
+    banner_row = (
+        ft.Container(
+            content=bottom_banner,
+            alignment=ft.Alignment.CENTER,
+            bgcolor=ft.Colors.SURFACE_CONTAINER,
+        )
+        if bottom_banner
+        else None
     )
 
     # Content wrapped in context provider.
@@ -132,28 +242,36 @@ def App(ctx_value: AppContextValue, state: AppState, services: list | None = Non
                         expand=True,
                         bgcolor=ft.Colors.SURFACE_CONTAINER_LOWEST,
                     ),
-                ],
+                ]
+                + ([banner_row] if banner_row else []),
                 spacing=0,
                 expand=True,
             )
         ],
     )
 
+    # FAB hidden on native mobile — BMC is always in the drawer there.
+    show_fab = not is_ads_supported()
+
     def _open_bmc(_e: ft.ControlEvent) -> None:
         _e.page.run_task(ft.UrlLauncher().launch_url, "https://www.buymeacoffee.com/brunobrown")
 
-    bmc_button = ft.FloatingActionButton(
-        content=ft.Image(
-            src="/icons/bmc-logo-no-background.png",
-            width=28,
-            height=28,
-            fit=ft.BoxFit.CONTAIN,
-        ),
-        bgcolor="#FFDD00",
-        shape=ft.CircleBorder(),
-        mini=True,
-        tooltip="Buy me a coffee",
-        on_click=_open_bmc,
+    bmc_button = (
+        ft.FloatingActionButton(
+            content=ft.Image(
+                src="/icons/bmc-logo-no-background.png",
+                width=28,
+                height=28,
+                fit=ft.BoxFit.CONTAIN,
+            ),
+            bgcolor="#FFDD00",
+            shape=ft.CircleBorder(),
+            mini=True,
+            tooltip="Buy me a coffee",
+            on_click=_open_bmc,
+        )
+        if show_fab
+        else None
     )
 
     async def _on_confirm_pop(e: ft.ControlEvent) -> None:

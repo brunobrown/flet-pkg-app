@@ -111,6 +111,13 @@ UI_CONTROL_KEYWORDS = [
 # --- Category Filters ---
 CATEGORIES = {gui = ["gui", "ui", "flet-gui", "interface", "flet-ui"], mobile = ["mobile", "android", "ios"], desktop = ["desktop", "desktop-app", "cross-platform"], web = ["web", "webapp", "fastapi", "flask"], devtools = ["flet-routing", "routing", "flet-architecture", "flet-design-pattern", "devtools"], database = ["sqlite", "database", "firebase", "supabase"], media = ["music-player", "audio", "video", "camera", "lottie", "rive"]}
 
+# --- Ads (Google AdMob) ---
+[default.ADS_BANNER]
+# Test IDs — replace with real ad unit IDs in production
+# Use Fixed-Size Banner IDs (not Adaptive) since BannerAd uses explicit width/height
+android = "ca-app-pub-3940256099942544/6300978111"
+ios = "ca-app-pub-3940256099942544/2435281174"
+
 # --- Footer Links ---
 [default.FOOTER_LINKS]
 discord = "https://discord.gg/dzWXP8SHG8"

@@ -237,6 +237,18 @@ all = [
 ]
 
 [[package]]
+name = "flet-ads"
+version = "0.84.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "flet" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0f/04/70a10788cfb023312f6770dd2f067da6031a4c57c9f1206822bc8d034bab/flet_ads-0.84.0.tar.gz", hash = "sha256:fc2a64fe1d6ba6e8079810fd9688550496e61e5053033ffe0a3db2aa7d179d01", size = 12782, upload-time = "2026-04-01T19:24:11.967Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1b/f5/a6be072e61708fab2a8e512c60b6ea80df2009739bf2b2dacab0f38c12d7/flet_ads-0.84.0-py3-none-any.whl", hash = "sha256:bc32691577dfcd254139b871d1493283bda9de439c3d389e9c6e2333035d7c95", size = 16457, upload-time = "2026-04-01T19:24:11.191Z" },
+]
+
+[[package]]
 name = "flet-cli"
 version = "0.84.0"
 source = { registry = "https://pypi.org/simple" }
@@ -273,6 +285,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "dynaconf" },
     { name = "flet" },
+    { name = "flet-ads" },
     { name = "httpx" },
     { name = "rich" },
     { name = "structlog" },
@@ -292,6 +305,7 @@ dev = [
 requires-dist = [
     { name = "dynaconf", specifier = ">=3.2.13" },
     { name = "flet", specifier = ">=0.84.0" },
+    { name = "flet-ads", specifier = ">=0.84.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "rich", specifier = ">=14.3.3" },
     { name = "structlog", specifier = ">=25.5.0" },

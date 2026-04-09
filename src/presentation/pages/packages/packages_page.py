@@ -111,7 +111,7 @@ def PackagesPage(
                         on_search=ctx.search,
                     ),
                     col={
-                        ft.ResponsiveRowBreakpoint.XS: 12,
+                        ft.ResponsiveRowBreakpoint.XS: 6,
                         ft.ResponsiveRowBreakpoint.SM: 6,
                         ft.ResponsiveRowBreakpoint.LG: 4,
                     },
@@ -276,6 +276,7 @@ def PackagesPage(
                     items=[
                         ft.PopupMenuItem(
                             content=ft.Text(s, size=13),
+                            checked=state.sort_by == s,
                             on_click=lambda _, _s=s: handle_sort_change(_s),
                         )
                         for s in settings.SORT_OPTIONS

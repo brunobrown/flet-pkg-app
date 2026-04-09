@@ -412,103 +412,125 @@ def PackageCardGrid(
         run_spacing=2,
     )
 
-    card = ft.Container(
-        content=ft.Column(
+    # Compact mode: hide topics and version row on small screens
+    _page = ft.context.page
+    compact = _page.width is not None and _page.width < 600
+
+    card_controls = [
+        ft.Row(
+            controls=[
+                ft.Text(
+                    package.name,
+                    size=16,
+                    weight=ft.FontWeight.BOLD,
+                    color=ft.Colors.PRIMARY,
+                    max_lines=1,
+                    overflow=ft.TextOverflow.ELLIPSIS,
+                    expand=True,
+                ),
+            ]
+            + (
+                []
+                if compact
+                else [
+                    ft.IconButton(
+                        icon=ft.Icons.COPY,
+                        icon_size=12,
+                        icon_color=ft.Colors.ON_SURFACE_VARIANT,
+                        tooltip=package.pip_install_command,
+                        on_click=handle_copy,
+                    ),
+                ]
+            ),
+            spacing=0,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+        ft.Text(
+            truncate(package.description, 60 if compact else 100),
+            size=12,
+            color=ft.Colors.ON_SURFACE,
+            max_lines=2,
+            overflow=ft.TextOverflow.ELLIPSIS,
+        ),
+    ]
+
+    # Topics and badges: hidden in compact mode
+    if not compact:
+        if package.topics:
+            card_controls.append(topics_row)
+
+    # Stats row (always visible)
+    card_controls.append(
+        ft.Row(
             controls=[
                 ft.Row(
                     controls=[
+                        ft.Icon(ft.Icons.STAR, size=13, color=ft.Colors.PRIMARY),
                         ft.Text(
-                            package.name,
-                            size=16,
-                            weight=ft.FontWeight.BOLD,
+                            format_number(package.stars),
+                            size=12,
                             color=ft.Colors.PRIMARY,
-                            max_lines=1,
-                            overflow=ft.TextOverflow.ELLIPSIS,
-                            expand=True,
-                        ),
-                        ft.IconButton(
-                            icon=ft.Icons.COPY,
-                            icon_size=12,
-                            icon_color=ft.Colors.ON_SURFACE_VARIANT,
-                            tooltip=package.pip_install_command,
-                            on_click=handle_copy,
                         ),
                     ],
-                    spacing=0,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                ),
-                ft.Text(
-                    truncate(package.description, 100),
-                    size=12,
-                    color=ft.Colors.ON_SURFACE,
-                    max_lines=2,
-                    overflow=ft.TextOverflow.ELLIPSIS,
-                ),
-                topics_row if package.topics else ft.Container(),
-                ft.Row(
-                    controls=[
-                        ft.Row(
-                            controls=[
-                                ft.Icon(ft.Icons.STAR, size=13, color=ft.Colors.PRIMARY),
-                                ft.Text(
-                                    format_number(package.stars),
-                                    size=12,
-                                    color=ft.Colors.PRIMARY,
-                                ),
-                            ],
-                            spacing=4,
-                            tight=True,
-                        ),
-                        ft.Row(
-                            controls=[
-                                ft.Icon(ft.Icons.DOWNLOAD, size=13, color=ft.Colors.PRIMARY),
-                                ft.Text(
-                                    format_number(package.downloads),
-                                    size=12,
-                                    color=ft.Colors.PRIMARY,
-                                ),
-                            ],
-                            spacing=4,
-                            tight=True,
-                        ),
-                        *([_verified_badge()] if package.is_verified else []),
-                        *([_new_badge()] if package.is_new else []),
-                        *([_github_only_badge()] if not package.pypi_name else []),
-                    ],
-                    spacing=12,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    wrap=True,
-                    run_spacing=6,
+                    spacing=4,
+                    tight=True,
                 ),
                 ft.Row(
                     controls=[
+                        ft.Icon(ft.Icons.DOWNLOAD, size=13, color=ft.Colors.PRIMARY),
                         ft.Text(
-                            f"v{package.version}" if package.version else "",
-                            size=11,
-                            color=ft.Colors.ON_SURFACE_VARIANT,
+                            format_number(package.downloads),
+                            size=12,
+                            color=ft.Colors.PRIMARY,
                         ),
-                        ft.Text(
-                            format_date(package.updated_at) if package.updated_at else "",
-                            size=11,
-                            color=ft.Colors.ON_SURFACE_VARIANT,
-                        ),
-                        _publisher_link(package.publisher or package.github_owner),
                     ],
-                    spacing=8,
-                    wrap=True,
-                    run_spacing=2,
+                    spacing=4,
+                    tight=True,
                 ),
+                *([_verified_badge()] if package.is_verified else []),
+                *([_new_badge()] if package.is_new else []),
+                *([_github_only_badge()] if not package.pypi_name else []),
             ],
-            spacing=6,
+            spacing=12,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            wrap=True,
+            run_spacing=6,
         ),
-        padding=16,
+    )
+
+    # Version/publisher row: hidden in compact mode
+    if not compact:
+        card_controls.append(
+            ft.Row(
+                controls=[
+                    ft.Text(
+                        f"v{package.version}" if package.version else "",
+                        size=11,
+                        color=ft.Colors.ON_SURFACE_VARIANT,
+                    ),
+                    ft.Text(
+                        format_date(package.updated_at) if package.updated_at else "",
+                        size=11,
+                        color=ft.Colors.ON_SURFACE_VARIANT,
+                    ),
+                    _publisher_link(package.publisher or package.github_owner),
+                ],
+                spacing=8,
+                wrap=True,
+                run_spacing=2,
+            ),
+        )
+
+    card = ft.Container(
+        content=ft.Column(controls=card_controls, spacing=6),
+        padding=12 if compact else 16,
         border_radius=8,
         bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
         shadow=_CARD_SHADOW,
         border=_NEON_BORDER if hovered else _DEFAULT_BORDER,
         animate=ft.Animation(200, ft.AnimationCurve.EASE_OUT),
         width=200,
-        height=200,
+        height=150 if compact else 200,
     )
 
     return ft.GestureDetector(

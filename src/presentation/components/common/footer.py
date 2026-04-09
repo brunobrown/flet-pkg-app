@@ -1,12 +1,17 @@
-"""App footer — single line with icon links."""
+"""App footer — single line with icon links. Hidden on native mobile."""
 
 import flet as ft
+from flet.utils import is_mobile
 
 from config import settings
 
 
 @ft.component
 def AppFooter() -> ft.Control:
+    # Hide footer on native mobile — links are in the drawer instead
+    if is_mobile():
+        return ft.Container()
+
     links = settings.get("FOOTER_LINKS", {})
 
     return ft.Container(
