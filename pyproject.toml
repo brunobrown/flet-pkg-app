@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "dynaconf>=3.2.13",
     "flet>=0.84.0",
+    "flet-ads>=0.84.0",
     "httpx>=0.28.1",
     "rich>=14.3.3",
     "structlog>=25.5.0",
@@ -21,6 +22,13 @@ dev = [
     "scikit-image>=0.26.0",
 ]
 
+
+[tool.flet.android.permission]
+"android.permission.INTERNET" = true
+"android.permission.ACCESS_NETWORK_STATE" = true
+
+[tool.flet.android.meta_data]
+"com.google.android.gms.ads.APPLICATION_ID" = "ca-app-pub-3940256099942544~3347511713"
 
 [tool.ruff]
 line-length = 100
