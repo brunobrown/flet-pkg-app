@@ -421,6 +421,9 @@ def PackageDetailPage(
                     controls=[
                         ft.ResponsiveRow(
                             controls=[
+                                # Title + copy/share icons flow together with wrap=True.
+                                # On narrow screens, text wraps naturally and icons flow
+                                # below when there's no horizontal space.
                                 ft.Container(
                                     content=ft.Row(
                                         controls=[
@@ -445,7 +448,9 @@ def PackageDetailPage(
                                                 on_click=handle_share,
                                             ),
                                         ],
-                                        spacing=0,
+                                        wrap=True,
+                                        spacing=4,
+                                        run_spacing=4,
                                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                                     ),
                                     col={
