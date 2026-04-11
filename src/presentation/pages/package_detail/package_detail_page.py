@@ -55,20 +55,22 @@ def PackageDetailPage(
             on_copy(pkg.pip_install_command)
 
     def handle_share(_e: ft.ControlEvent) -> None:
-        if on_copy:
-            name = pkg.pypi_name or pkg.name
-            card = (
-                f":: {name} {pkg.version}\n"
-                f"{pkg.description}\n"
-                f"Stars: {format_number(pkg.stars)}"
-                f" | Downloads: {format_number(pkg.downloads)}\n"
-            )
-            if pkg.publisher:
-                card += f"Publisher: {pkg.publisher}"
-            if pkg.license:
-                card += f" | {pkg.license}"
-            card += f"\n{settings.FLET_PKG_APP_BASE_URL}/packages/{name}"
-            on_copy(card)
+        name = pkg.pypi_name or pkg.name
+        url = f"{settings.FLET_PKG_APP_BASE_URL}/packages/{name}"
+        text_lines = [
+            f"📦 {name} {pkg.version}".strip(),
+            "",
+            pkg.description or "",
+            "",
+            f"⭐ {format_number(pkg.stars)} stars  ⬇ {format_number(pkg.downloads)} downloads",
+        ]
+        if pkg.publisher:
+            text_lines.append(f"👤 {pkg.publisher}")
+        text_lines.append("")
+        text_lines.append(url)
+        text_lines.append("")
+        text_lines.append("Discovered via Flet PKG")
+        ctx.share_url("\n".join(text_lines), subject=f"Flet package: {name}")
 
     def _handle_markdown_link(e: ft.ControlEvent) -> None:
         url = e.data or ""
@@ -419,6 +421,9 @@ def PackageDetailPage(
                     controls=[
                         ft.ResponsiveRow(
                             controls=[
+                                # Title + copy/share icons flow together with wrap=True.
+                                # On narrow screens, text wraps naturally and icons flow
+                                # below when there's no horizontal space.
                                 ft.Container(
                                     content=ft.Row(
                                         controls=[
@@ -443,7 +448,9 @@ def PackageDetailPage(
                                                 on_click=handle_share,
                                             ),
                                         ],
-                                        spacing=0,
+                                        wrap=True,
+                                        spacing=4,
+                                        run_spacing=4,
                                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                                     ),
                                     col={

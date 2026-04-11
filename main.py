@@ -116,6 +116,7 @@ def main(page: ft.Page) -> None:
     nav = NavigationService(page)
     prefs = ft.SharedPreferences()
     url_launcher = ft.UrlLauncher()
+    share = ft.Share()
 
     # Start index build only once (first session) — thread-safe
     with _startup_lock:
@@ -260,6 +261,22 @@ def main(page: ft.Page) -> None:
         page.run_task(clipboard.set, text)
         page.show_dialog(ft.SnackBar(ft.Text(f"Copied: {text}")))
 
+    async def _do_share_text(text: str, subject: str | None) -> None:
+        await share.share_text(text=text, subject=subject)
+
+    def handle_share_url(text: str, subject: str | None = None) -> None:
+        """Open native share sheet (mobile) or fallback to clipboard.
+
+        Args:
+            text: The text/URL to share. Can be a plain URL or formatted text.
+            subject: Optional subject (used by email apps on Android).
+        """
+        if page.platform.is_mobile():
+            page.run_task(_do_share_text, text, subject)
+        else:
+            page.run_task(clipboard.set, text)
+            page.show_dialog(ft.SnackBar(ft.Text("Copied to clipboard")))
+
     # Note: ApiService is a singleton shared across all sessions.
     # Do NOT close it on session disconnect — the re-index loop and
     # other sessions still need the httpx clients.
@@ -290,10 +307,11 @@ def main(page: ft.Page) -> None:
         search=handle_search,
         reload_packages=handle_reload_packages,
         copy_to_clipboard=handle_copy,
+        share_url=handle_share_url,
     )
 
     # --- Initial load + render ---
-    page.render_views(App, ctx_value, app_state, [prefs, url_launcher])
+    page.render_views(App, ctx_value, app_state, [prefs, url_launcher, share])
     page.run_task(_load_preferences)
     _handle_route(page.route)
 

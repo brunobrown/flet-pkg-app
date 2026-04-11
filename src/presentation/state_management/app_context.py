@@ -22,6 +22,7 @@ class AppContextValue:
     search: Callable[[str], None]
     reload_packages: Callable[[], None]
     copy_to_clipboard: Callable[[str], None]
+    share_url: Callable[..., None]
 
 
 AppCtx = ft.create_context(None)

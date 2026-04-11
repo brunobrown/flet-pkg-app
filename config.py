@@ -16,6 +16,12 @@ _validators = Validator(
             "Create a .secrets.toml file in the project root:\n"
             "\n"
             "  [default]\n"
+            '  MOBILE_GITHUB_TOKEN = "ghp_your_personal_access_token_here"\n'
+            "  [development]\n"
+            '  GITHUB_TOKEN = "ghp_your_personal_access_token_here"\n'
+            "  [homologation]\n"
+            '  GITHUB_TOKEN = "ghp_your_personal_access_token_here"\n'
+            "  [production]\n"
             '  GITHUB_TOKEN = "ghp_your_personal_access_token_here"\n'
             "\n"
             "Docs: https://dynaconf.com"
@@ -33,5 +39,5 @@ settings = Dynaconf(
     settings_files=["settings.toml", ".secrets.toml"],
     # Prefix for environment variable overrides (e.g. SET_VAR_DYNACONF_GITHUB_TOKEN=xxx)
     envvar_prefix="SET_VAR_DYNACONF",
-    validators=_validators,
+    validators=[_validators],
 )
