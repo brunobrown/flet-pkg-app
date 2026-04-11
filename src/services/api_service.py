@@ -1,3 +1,5 @@
+from flet.utils import is_mobile
+
 from config import settings
 from src.data.repositories.package_repository_impl import PackageRepositoryImpl
 from src.data.sources.clickhouse_source import ClickHouseSource
@@ -10,11 +12,25 @@ from src.services.local_index_cache import LocalIndexCache
 from src.services.package_index_service import PackageIndexService
 
 
+def _resolve_github_token() -> str:
+    """Pick the right GitHub token for the current platform.
+
+    On mobile (Android/iOS), use MOBILE_GITHUB_TOKEN — empty by default for release
+    builds (60 req/h per user is sufficient), but can be overridden in .secrets.toml
+    for testing with higher limits.
+
+    On desktop/web, use the standard GITHUB_TOKEN.
+    """
+    if is_mobile():
+        return settings.get("MOBILE_GITHUB_TOKEN", "")
+    return settings.GITHUB_TOKEN
+
+
 class ApiService:
     """Factory that creates and wires up all data layer dependencies."""
 
     def __init__(self):
-        self._github_source = GitHubSource(token=settings.GITHUB_TOKEN)
+        self._github_source = GitHubSource(token=_resolve_github_token())
         self._pypi_source = PyPISource()
         self._clickhouse_source = ClickHouseSource()
         self._cache = CacheService(ttl=settings.CACHE_TTL_SECONDS)
