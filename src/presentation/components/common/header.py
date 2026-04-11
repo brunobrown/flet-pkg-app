@@ -31,6 +31,8 @@ def AppHeader(
 
     def handle_clear(_e: ft.ControlEvent) -> None:
         set_query("")
+        if on_search:
+            on_search("")
 
     # --- Desktop header ---
     if show_logo:
