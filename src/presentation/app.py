@@ -224,12 +224,14 @@ def App(ctx_value: AppContextValue, state: AppState, services: list | None = Non
                                 on_navigate_home=lambda: ctx_value.navigate("home"),
                                 on_search=ctx_value.search
                                 if state.current_page == "packages"
+                                and not (is_ads_supported() and state.is_offline)
                                 else None,
                                 on_toggle_pypi_filter=ctx_value.toggle_pypi_filter,
                                 on_navigate_guide=lambda: ctx_value.navigate("guide"),
                                 on_navigate_contribute=lambda: ctx_value.navigate("contribute"),
                                 is_dark=state.is_dark,
-                                show_logo=state.current_page != "home",
+                                show_logo=state.current_page != "home"
+                                or (is_ads_supported() and state.is_offline),
                                 show_pypi_only=state.show_pypi_only,
                                 search_query=state.packages.search_query,
                             ),
