@@ -7,6 +7,7 @@ dependencies = [
     "dynaconf>=3.2.13",
     "flet>=0.84.0",
     "flet-ads>=0.84.0",
+    "flet-splash>=0.2.2",
     "httpx>=0.28.1",
     "rich>=14.3.3",
     "structlog>=25.5.0",
@@ -22,6 +23,33 @@ dev = [
     "scikit-image>=0.26.0",
 ]
 
+[tool.flet]
+product = "Flet PKG"                # --product
+org = "com.flet"                    # --org
+company = "Bruno Brown"             # --company
+copyright = "© 2026 Bruno Brown"    # --copyright
+build_number = 1                    # --build-number
+build_version = "0.1.0"             # --build-version
+
+[tool.flet.splash]
+color = "#081425"                   # --splash-color
+dark_color = "#081425"              # --splash-dark-color
+type = "image"
+source = "assets/images/pkg.png"
+background = "#081425"
+min_duration = 3.0
+fade_duration = 0.5
+text = "Loading..."
+text_color = "#ffffff"
+text_size = 14
+
+[tool.flet.app.boot_screen]
+show = true
+message = "Flet PKG..."
+
+[tool.flet.app.startup_screen]
+show = true
+message = "Flet PKG..."
 
 [tool.flet.android.permission]
 "android.permission.INTERNET" = true

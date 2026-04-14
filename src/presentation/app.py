@@ -184,15 +184,12 @@ def App(ctx_value: AppContextValue, state: AppState, services: list | None = Non
         )
         if not unit_id:
             return None
-        import logging
-
-        logger = logging.getLogger(__name__)
+        # Note: No event handlers — they fire after re-renders when the control
+        # may already be detached, causing "Control must be added to the page first".
         return BannerAd(
             unit_id=unit_id,
             width=320,
             height=50,
-            on_load=lambda e: logger.info("[ADS] Banner loaded OK"),
-            on_error=lambda e: logger.warning("[ADS] Banner error: %s", e.data),
         )
 
     bottom_banner = ft.use_memo(_create_bottom_banner, [])
