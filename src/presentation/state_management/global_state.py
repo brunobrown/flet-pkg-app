@@ -73,3 +73,6 @@ class AppState:
 
     # Filter — show only packages published on PyPI (default True)
     show_pypi_only: bool = True
+
+    # Connectivity
+    is_offline: bool = False

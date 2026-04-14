@@ -2,6 +2,8 @@
 
 import logging
 
+import httpx
+
 from src.core.exceptions import PackageNotFoundError
 from src.domain.usecases.get_home_data import GetHomeDataUseCase
 from src.domain.usecases.get_package_detail import GetPackageDetailUseCase
@@ -12,10 +14,21 @@ from src.services.api_service import ApiService
 
 logger = logging.getLogger(__name__)
 
+# Network-related exceptions that indicate connectivity issues
+_NETWORK_ERRORS = (
+    httpx.ConnectError,
+    httpx.TimeoutException,
+    httpx.NetworkError,
+    OSError,
+    ConnectionError,
+)
+
 
 def _user_error(e: Exception) -> str:
     """Convert exception to user-friendly message, logging the original."""
     logger.warning("Operation failed: %s", e)
+    if isinstance(e, _NETWORK_ERRORS):
+        return "Could not load data. Check your internet connection."
     if isinstance(e, PackageNotFoundError):
         return "Package not found."
     return "Something went wrong. Please try again."

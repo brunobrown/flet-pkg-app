@@ -117,12 +117,33 @@ def main(page: ft.Page) -> None:
     prefs = ft.SharedPreferences()
     url_launcher = ft.UrlLauncher()
     share = ft.Share()
+    connectivity = ft.Connectivity()
 
-    # Start index build only once (first session) — thread-safe
-    with _startup_lock:
-        if not _shared_api_started:
-            _shared_api_started = True
-            page.run_task(api.start_background_tasks)
+    # --- Connectivity monitoring ---
+    async def _check_connectivity() -> None:
+        """Check current connectivity and update app_state.is_offline."""
+        try:
+            results = await connectivity.get_connectivity()
+            was_offline = app_state.is_offline
+            app_state.is_offline = all(r == ft.ConnectivityType.NONE for r in results)
+            # If we came back online, reload current page data
+            if was_offline and not app_state.is_offline:
+                logging.info("Connectivity restored — reloading data")
+                _handle_route(page.route)
+        except Exception:
+            logging.debug("Connectivity check failed — assuming offline")
+            app_state.is_offline = True
+
+    def _on_connectivity_change(e: ft.ConnectivityChangeEvent) -> None:
+        """React to connectivity changes in real-time."""
+        app_state.is_offline = all(r == ft.ConnectivityType.NONE for r in e.connectivity)
+        if not app_state.is_offline:
+            logging.info("Connectivity restored — starting tasks and reloading data")
+            page.run_task(_start_api_and_load)
+
+    connectivity.on_change = _on_connectivity_change
+
+    # start_background_tasks is deferred to _initial_load (after connectivity check)
 
     # --- Load saved preferences ---
     async def _load_preferences() -> None:
@@ -311,9 +332,26 @@ def main(page: ft.Page) -> None:
     )
 
     # --- Initial load + render ---
-    page.render_views(App, ctx_value, app_state, [prefs, url_launcher, share])
+    # Start background tasks + load route only when online.
+    # Used both at startup and when connectivity is restored.
+    async def _start_api_and_load() -> None:
+        global _shared_api_started
+        with _startup_lock:
+            if not _shared_api_started:
+                _shared_api_started = True
+                await api.start_background_tasks()
+        _handle_route(page.route)
+
+    # Check connectivity first. If offline on mobile,
+    # the OfflineScreen shows immediately without trying HTTP requests.
+    async def _initial_load() -> None:
+        await _check_connectivity()
+        if not app_state.is_offline:
+            await _start_api_and_load()
+
+    page.render_views(App, ctx_value, app_state, [prefs, url_launcher, share, connectivity])
     page.run_task(_load_preferences)
-    _handle_route(page.route)
+    page.run_task(_initial_load)
 
 
 if __name__ == "__main__":

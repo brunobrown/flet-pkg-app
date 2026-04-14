@@ -1,5 +1,7 @@
 import asyncio
 
+import httpx
+
 from config import settings
 from src.core.exceptions import PackageNotFoundError
 from src.core.logger import get_logger
@@ -174,6 +176,8 @@ class PackageRepositoryImpl(PackageRepository):
             info = pypi_data.get("info", {})
             pkg.package_type = classify_by_summary(info.get("summary", ""), package_name)
             pkg.downloads = await self._get_downloads(package_name)
+        except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError, OSError):
+            raise
         except Exception:
             logger.info("Package %s not on PyPI, trying GitHub", package_name)
 

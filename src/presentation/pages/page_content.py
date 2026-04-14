@@ -1,8 +1,10 @@
 """Page content router — reads current_page from context and renders the right page."""
 
 import flet as ft
+from flet.utils import is_mobile
 
 from src.domain.entities.package import Package
+from src.presentation.components.common.offline_screen import OfflineScreen
 from src.presentation.pages.contribute.contribute_page import ContributePage
 from src.presentation.pages.guide.developer_guide_page import DeveloperGuidePage
 from src.presentation.pages.home.home_page import HomePage
@@ -18,6 +20,17 @@ def PageContent() -> ft.Control:
         return ft.Container()
     state = ctx.state
     pkg_state = state.packages
+
+    # Offline screen only on native mobile (Android/iOS).
+    # On desktop/web, the browser handles no-internet before the app loads.
+    # Guide and Contribute pages are static — they can be shown offline.
+    if is_mobile() and state.is_offline and state.current_page not in ("guide", "contribute"):
+        return ft.Column(
+            controls=[OfflineScreen()],
+            alignment=ft.MainAxisAlignment.CENTER,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            expand=True,
+        )
 
     def handle_package_click(pkg: object) -> None:
         if isinstance(pkg, Package):
