@@ -32,12 +32,15 @@ build_number = 1                    # --build-number
 build_version = "0.1.0"             # --build-version
 
 [tool.flet.splash]
+# Native Flutter splash (shown before Flet/Python initializes)
 color = "#081425"                   # --splash-color
 dark_color = "#081425"              # --splash-dark-color
+# flet-splash animated layer (shown after native splash, while the app loads)
 type = "image"
 source = "assets/images/pkg.png"
 background = "#081425"
-min_duration = 3.0
+dark_background = "#081425"
+min_duration = 5.0
 fade_duration = 0.5
 text = "Loading..."
 text_color = "#ffffff"
@@ -57,6 +60,15 @@ message = "Flet PKG..."
 
 [tool.flet.android.meta_data]
 "com.google.android.gms.ads.APPLICATION_ID" = "ca-app-pub-3940256099942544~3347511713"
+
+#[tool.flet.android.signing]
+## Passwords via env vars (loaded from .secrets.toml by scripts/build_aab.py):
+##   FLET_ANDROID_SIGNING_KEY_STORE_PASSWORD
+##   FLET_ANDROID_SIGNING_KEY_PASSWORD
+## Path must be absolute — Gradle resolves relative paths against build/flutter/android/app/.
+## Update to match your local checkout path if cloning on another machine.
+#key_store = "/data/projects/python/flet-pkg-app/upload-keystore.jks"
+#key_alias = "upload"
 
 [tool.ruff]
 line-length = 100
@@ -105,3 +117,30 @@ unresolved-attribute = "ignore"
 
 [tool.ty.terminal]
 output-format = "concise"
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+# How to set PORTRAITE mode: In the file build/flutter/lib/main.dart, replace lines 65–69.
+
+# From:
+#
+# void main(List<String> args) async {
+#
+#    FletDeepLinkingBootstrap.install();
+#
+#    _args = List<String>.from(args);
+#
+# To:
+#
+# void main(List<String> args) async {
+#
+#    // Lock app to portrait orientation on mobile devices
+#    WidgetsFlutterBinding.ensureInitialized();     <-- new
+#    await SystemChrome.setPreferredOrientations([  <-- new
+#      DeviceOrientation.portraitUp,                <-- new
+#      DeviceOrientation.portraitDown,              <-- new
+#    ]);                                            <-- new
+#
+#    FletDeepLinkingBootstrap.install();
+#
+#    _args = List<String>.from(args);

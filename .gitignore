@@ -214,6 +214,11 @@ tmp
 # Ignore dynaconf secret files
 .secrets.*
 
+# Android signing keystore
+*.jks
+*.keystore
+*.p12
+
 # Docusaurus
 docs/node_modules/
 docs/build/
