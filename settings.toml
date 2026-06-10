@@ -115,7 +115,7 @@ CATEGORIES = {gui = ["gui", "ui", "flet-gui", "interface", "flet-ui"], mobile = 
 [default.ADS_BANNER]
 # Test IDs — replace with real ad unit IDs in production
 # Use Fixed-Size Banner IDs (not Adaptive) since BannerAd uses explicit width/height
-android = "ca-app-pub-3940256099942544/6300978111"
+android = "ca-app-pub-5031258638351449/1760009698"
 ios = "ca-app-pub-3940256099942544/2435281174"
 
 # --- Footer Links ---
