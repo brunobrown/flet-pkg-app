@@ -1,6 +1,6 @@
 [project]
 name = "flet-pkg-app"
-version = "0.1.0"
+version = "0.1.1"
 description = "Flet PKG - Package discovery platform for the Flet ecosystem"
 requires-python = ">=3.12"
 dependencies = [
@@ -24,39 +24,87 @@ dev = [
 ]
 
 [tool.flet]
-product = "Flet PKG"                # --product
-org = "com.flet"                    # --org
-company = "Bruno Brown"             # --company
-copyright = "© 2026 Bruno Brown"    # --copyright
-build_number = 1                    # --build-number
-build_version = "0.1.0"             # --build-version
+# Android/iOS package id. Without bundle_id flet builds "{org}.{project_name}"
+# (= dev.fletpkg.flet_pkg_app); the Play Console listing requires exactly dev.fletpkg.
+bundle_id = "dev.fletpkg"                   # --bundle-id
+product = "Flet PKG"                        # --product
+org = "dev.fletpkg"                         # --org
+company = "Mulberry Technology"             # --company
+copyright = "© 2026 Mulberry Technology"    # --copyright
+build_number = 2                            # --build-number
+build_version = "0.1.1"                     # --build-version
 
 [tool.flet.splash]
+# Native Flutter splash (shown before Flet/Python initializes)
 color = "#081425"                   # --splash-color
 dark_color = "#081425"              # --splash-dark-color
+# flet-splash animated layer (shown after native splash, while the app loads)
 type = "image"
 source = "assets/images/pkg.png"
 background = "#081425"
-min_duration = 3.0
+dark_background = "#081425"
+min_duration = 5.0
 fade_duration = 0.5
-text = "Loading..."
+text = "Loading packages..."
 text_color = "#ffffff"
 text_size = 14
 
+[tool.flet.app]
+# Files/dirs kept OUT of the packaged Python app (app.zip inside the apk/aab).
+# flet build does NOT honor .gitignore — by default it only excludes "build",
+# so everything else in the project root gets bundled unless listed here.
+# SECURITY: upload-keystore.jks (the Android signing key) and the real secrets
+# backup must never ship. .secrets.toml itself IS bundled, but scripts/build_aab.py
+# replaces it with an empty-valued copy during the build (see that script).
+exclude = [
+    "upload-keystore.jks",
+    ".secrets.toml.bak",
+    ".mcp.json",
+    ".gitignore",
+    ".venv",
+    "docs",
+    "tests",
+    "scripts",
+    ".github",
+    ".idea",
+    ".claude",
+    ".planning",
+    # NOTE: do NOT exclude ".cache" — it ships the seed package_index.json that the
+    # app loads at startup (LocalIndexCache, default dir ".cache"). Without it the
+    # home screen stays stuck on "Loading packages...".
+    ".pytest_cache",
+    ".ruff_cache",
+    "__pycache__",
+    "tmp",
+    "uv.lock",
+    "Dockerfile",
+    ".dockerignore",
+    "render.yaml",
+]
+
 [tool.flet.app.boot_screen]
 show = true
-message = "Flet PKG..."
+message = "Loading packages..."
 
 [tool.flet.app.startup_screen]
 show = true
-message = "Flet PKG..."
+message = "Loading packages..."
 
 [tool.flet.android.permission]
 "android.permission.INTERNET" = true
 "android.permission.ACCESS_NETWORK_STATE" = true
 
 [tool.flet.android.meta_data]
-"com.google.android.gms.ads.APPLICATION_ID" = "ca-app-pub-3940256099942544~3347511713"
+"com.google.android.gms.ads.APPLICATION_ID" = "ca-app-pub-5031258638351449~5109670725"
+
+#[tool.flet.android.signing]
+## Passwords via env vars (loaded from .secrets.toml by scripts/build_aab.py):
+##   FLET_ANDROID_SIGNING_KEY_STORE_PASSWORD
+##   FLET_ANDROID_SIGNING_KEY_PASSWORD
+## Path must be absolute — Gradle resolves relative paths against build/flutter/android/app/.
+## Update to match your local checkout path if cloning on another machine.
+#key_store = "/data/projects/python/flet-pkg-app/upload-keystore.jks"
+#key_alias = "upload"
 
 [tool.ruff]
 line-length = 100
@@ -105,3 +153,30 @@ unresolved-attribute = "ignore"
 
 [tool.ty.terminal]
 output-format = "concise"
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+# How to set PORTRAITE mode: In the file build/flutter/lib/main.dart, replace lines 65–69.
+
+# From:
+#
+# void main(List<String> args) async {
+#
+#    FletDeepLinkingBootstrap.install();
+#
+#    _args = List<String>.from(args);
+#
+# To:
+#
+# void main(List<String> args) async {
+#
+#    // Lock app to portrait orientation on mobile devices
+#    WidgetsFlutterBinding.ensureInitialized();     <-- new
+#    await SystemChrome.setPreferredOrientations([  <-- new
+#      DeviceOrientation.portraitUp,                <-- new
+#      DeviceOrientation.portraitDown,              <-- new
+#    ]);                                            <-- new
+#
+#    FletDeepLinkingBootstrap.install();
+#
+#    _args = List<String>.from(args);

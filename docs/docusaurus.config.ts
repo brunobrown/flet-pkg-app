@@ -111,6 +111,10 @@ const config: Config = {
               label: 'GitHub',
               href: 'https://github.com/brunobrown/flet-pkg-app',
             },
+            {
+              label: 'Privacy Policy',
+              to: '/privacy-policy',
+            },
           ],
         },
       ],
