@@ -1,6 +1,6 @@
 [project]
 name = "flet-pkg-app"
-version = "0.1.0"
+version = "0.1.1"
 description = "Flet PKG - Package discovery platform for the Flet ecosystem"
 requires-python = ">=3.12"
 dependencies = [
@@ -31,8 +31,8 @@ product = "Flet PKG"                        # --product
 org = "dev.fletpkg"                         # --org
 company = "Mulberry Technology"             # --company
 copyright = "© 2026 Mulberry Technology"    # --copyright
-build_number = 1                            # --build-number
-build_version = "0.1.0"                     # --build-version
+build_number = 2                            # --build-number
+build_version = "0.1.1"                     # --build-version
 
 [tool.flet.splash]
 # Native Flutter splash (shown before Flet/Python initializes)
