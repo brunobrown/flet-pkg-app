@@ -234,6 +234,22 @@ class TestMaxOfficialQuota:
         assert len(community) == 2  # all available community shown
         assert len(official) == 3  # backfilled past the cap (only 3 exist)
 
+    def test_community_fills_slots_left_by_missing_official(self) -> None:
+        # Regression: with only 1 official but max_official=2, the unused
+        # official slot must go to community — not be left empty (the section
+        # was rendering 5 of 6 cards).
+        index = PackageIndexService.__new__(PackageIndexService)
+        index._ready = __import__("asyncio").Event()
+        index._ready.set()
+        index._packages = [
+            _make_pkg("off-1", pypi_name="off-1", downloads=9999, is_official=True),
+            *[_make_pkg(f"com-{i}", pypi_name=f"com-{i}", downloads=100 - i) for i in range(5)],
+        ]
+        results, _ = index.query(per_page=6, max_official=2)
+        assert len(results) == 6
+        assert sum(1 for p in results if p.is_official) == 1
+        assert sum(1 for p in results if not p.is_official) == 5
+
     def test_zero_official_keeps_only_community(self) -> None:
         index = _build_index()
         results, _ = index.query(pypi_only=False, per_page=4, max_official=0)

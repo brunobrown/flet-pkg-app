@@ -358,22 +358,27 @@ class PackageIndexService:
             result = sorted(result, key=lambda p: p.created_at or "", reverse=True)
         # SortOption.DEFAULT keeps the original order (by stars)
 
-        # Cap official packages, reserving slots for community packages.
-        # Fallback: if community packages are too few to fill their reserved
-        # slots, backfill with official packages so the section stays full.
+        # Cap official packages, reserving the remaining slots for community
+        # packages. Backfill works in both directions so a section is never left
+        # with empty slots while packages of the other kind are still available:
+        # if community packages are too few, more official ones fill the gap; if
+        # official packages are too few, the freed slots go to community.
         if max_official is not None:
-            community_total = sum(1 for p in result if not p.is_official)
-            community_slots = min(community_total, max(0, per_page - max_official))
-            official_slots = per_page - community_slots
+            official_total = sum(1 for p in result if p.is_official)
+            community_total = len(result) - official_total
+            official_cap = min(max_official, official_total)
+            community_cap = min(community_total, max(0, per_page - official_cap))
+            if official_cap + community_cap < per_page:
+                official_cap = min(official_total, per_page - community_cap)
             capped: list[Package] = []
             n_official = n_community = 0
             for p in result:
                 if p.is_official:
-                    if n_official >= official_slots:
+                    if n_official >= official_cap:
                         continue
                     n_official += 1
                 else:
-                    if n_community >= community_slots:
+                    if n_community >= community_cap:
                         continue
                     n_community += 1
                 capped.append(p)
