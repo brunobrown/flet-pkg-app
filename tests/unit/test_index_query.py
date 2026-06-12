@@ -202,6 +202,50 @@ class TestTextSearch:
         assert total == 1
         assert results[0].name == "awesome-flet"
 
+
+class TestMaxOfficialQuota:
+    """Home discovery sections cap official packages, reserving slots for
+    community packages, with a fallback that backfills official ones when
+    there aren't enough community packages to fill the section."""
+
+    def test_no_cap_by_default(self) -> None:
+        index = _build_index()
+        results, _ = index.query(pypi_only=False, per_page=10)
+        # All 3 official packages present when max_official is not set.
+        assert sum(1 for p in results if p.is_official) == 3
+
+    def test_caps_official_when_community_plentiful(self) -> None:
+        index = _build_index()
+        # pypi_only=False -> 4 community + 3 official. Cap official at 2.
+        results, _ = index.query(pypi_only=False, per_page=6, max_official=2)
+        official = [p for p in results if p.is_official]
+        community = [p for p in results if not p.is_official]
+        assert len(official) == 2
+        assert len(community) == 4
+        assert len(results) == 6
+
+    def test_backfills_with_official_when_community_short(self) -> None:
+        index = _build_index()
+        # pypi_only=True -> only 2 community. Reserved community slots can't be
+        # filled, so official backfills beyond max_official.
+        results, _ = index.query(pypi_only=True, per_page=6, max_official=2)
+        official = [p for p in results if p.is_official]
+        community = [p for p in results if not p.is_official]
+        assert len(community) == 2  # all available community shown
+        assert len(official) == 3  # backfilled past the cap (only 3 exist)
+
+    def test_zero_official_keeps_only_community(self) -> None:
+        index = _build_index()
+        results, _ = index.query(pypi_only=False, per_page=4, max_official=0)
+        assert all(not p.is_official for p in results)
+        assert len(results) == 4
+
+    def test_cap_preserves_sort_order(self) -> None:
+        index = _build_index()
+        results, _ = index.query(sort="most downloads", pypi_only=False, per_page=6, max_official=2)
+        downloads = [p.downloads for p in results]
+        assert downloads == sorted(downloads, reverse=True)
+
     def test_search_case_insensitive(self) -> None:
         index = _build_index()
         results, total = index.query(text="AUDIO")
