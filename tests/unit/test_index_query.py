@@ -242,9 +242,7 @@ class TestMaxOfficialQuota:
 
     def test_cap_preserves_sort_order(self) -> None:
         index = _build_index()
-        results, _ = index.query(
-            sort="most downloads", pypi_only=False, per_page=6, max_official=2
-        )
+        results, _ = index.query(sort="most downloads", pypi_only=False, per_page=6, max_official=2)
         downloads = [p.downloads for p in results]
         assert downloads == sorted(downloads, reverse=True)
 
