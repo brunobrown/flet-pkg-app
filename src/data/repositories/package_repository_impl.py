@@ -96,13 +96,22 @@ class PackageRepositoryImpl(PackageRepository):
 
     async def get_trending_packages(self, limit: int = 6, pypi_only: bool = True) -> list[Package]:
         await self._index.wait_until_ready()
-        packages, _ = self._index.query(sort="trending", pypi_only=pypi_only, per_page=limit)
+        packages, _ = self._index.query(
+            sort="trending",
+            pypi_only=pypi_only,
+            per_page=limit,
+            max_official=self._home_max_official(),
+        )
         return packages
 
     async def get_service_packages(self, limit: int = 6, pypi_only: bool = True) -> list[Package]:
         await self._index.wait_until_ready()
         packages, _ = self._index.query(
-            package_type="Services", sort="most downloads", pypi_only=pypi_only, per_page=limit
+            package_type="Services",
+            sort="most downloads",
+            pypi_only=pypi_only,
+            per_page=limit,
+            max_official=self._home_max_official(),
         )
         return packages
 
@@ -115,6 +124,7 @@ class PackageRepositoryImpl(PackageRepository):
             sort="most downloads",
             pypi_only=pypi_only,
             per_page=limit,
+            max_official=self._home_max_official(),
         )
         return packages
 
@@ -125,8 +135,15 @@ class PackageRepositoryImpl(PackageRepository):
             sort="most downloads",
             pypi_only=pypi_only,
             per_page=limit,
+            max_official=self._home_max_official(),
         )
         return packages
+
+    @staticmethod
+    def _home_max_official() -> int:
+        """Max official packages per home discovery section (rest reserved for
+        community). Configurable via HOME_SECTION_MAX_OFFICIAL; defaults to 2."""
+        return settings.get("HOME_SECTION_MAX_OFFICIAL", 2)
 
     # --- Detail pages: still make HTTP calls (per-package, cached) ---
 

@@ -289,8 +289,18 @@ class PackageIndexService:
         categories: list[str] | None = None,
         page: int = 1,
         per_page: int = 10,
+        max_official: int | None = None,
     ) -> tuple[list[Package], int]:
-        """Filter, sort, and paginate the in-memory index."""
+        """Filter, sort, and paginate the in-memory index.
+
+        ``max_official`` caps how many official (Flet-team) packages appear,
+        reserving the remaining slots for community packages. Used by the home
+        discovery sections so the official extensions — which already have their
+        own dedicated section and dominate every star/download ranking — don't
+        crowd out third-party packages. If there aren't enough community
+        packages to fill the reserved slots, they are backfilled with official
+        ones so the section is never left half-empty.
+        """
         result = self._packages
 
         # Filter: pypi_only
@@ -347,6 +357,27 @@ class PackageIndexService:
         elif sort == SortOption.NEWEST:
             result = sorted(result, key=lambda p: p.created_at or "", reverse=True)
         # SortOption.DEFAULT keeps the original order (by stars)
+
+        # Cap official packages, reserving slots for community packages.
+        # Fallback: if community packages are too few to fill their reserved
+        # slots, backfill with official packages so the section stays full.
+        if max_official is not None:
+            community_total = sum(1 for p in result if not p.is_official)
+            community_slots = min(community_total, max(0, per_page - max_official))
+            official_slots = per_page - community_slots
+            capped: list[Package] = []
+            n_official = n_community = 0
+            for p in result:
+                if p.is_official:
+                    if n_official >= official_slots:
+                        continue
+                    n_official += 1
+                else:
+                    if n_community >= community_slots:
+                        continue
+                    n_community += 1
+                capped.append(p)
+            result = capped
 
         total = len(result)
         start = (page - 1) * per_page

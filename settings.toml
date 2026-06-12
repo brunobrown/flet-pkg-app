@@ -35,6 +35,12 @@ INDEX_MAX_GITHUB_PAGES = 5
 INDEX_GITHUB_PER_PAGE = 100
 INDEX_DOWNLOAD_DAYS = 30
 
+# --- Home Sections ---
+# Max official (Flet-team) packages shown per home discovery section
+# (Trending, Services, UI Controls, Python). The remaining slots are reserved
+# for community packages; if there aren't enough, official ones backfill them.
+HOME_SECTION_MAX_OFFICIAL = 2
+
 # --- Rate Limiting ---
 PYPISTATS_MAX_CONCURRENT = 3
 GITHUB_MAX_CONCURRENT = 10
